@@ -22,6 +22,10 @@ public class MainGame {
         layeredPane.add(createBackgroundPanel(), Integer.valueOf(0));  // Background at layer 0
         layeredPane.add(createGridPanel(), Integer.valueOf(1));  // Grid on top at layer 1
 
+        JPanel chatPanel = createChatPanel();
+        chatPanel.setBounds(1000, 500, 250, 200);  // Positioning the chat panel in the bottom-right corner
+        layeredPane.add(chatPanel, Integer.valueOf(2));  // Chatbox on top at layer 2
+
         JMenuBar menubar = createMenuBar();
         frame.setJMenuBar(menubar);
         
@@ -203,5 +207,47 @@ public class MainGame {
     
         return menuBar;
     }
+
+    // Method to create the chat panel
+    private JPanel createChatPanel() {
+    JPanel chatPanel = new JPanel();
+    chatPanel.setLayout(new BorderLayout());
+    chatPanel.setPreferredSize(new Dimension(250, 200));  // Size for chat panel
+
+    // Text area to display chat messages (non-editable)
+    JTextArea chatArea = new JTextArea();
+    chatArea.setEditable(false);  // Users shouldn't edit chat history
+    chatArea.setLineWrap(true);   // Wrap text to the next line
+    chatArea.setWrapStyleWord(true);
+  //  chatArea.setOpaque(false);  // Make text area transparent
+    chatArea.setForeground(Color.BLACK);  // Set text color to white
+    JScrollPane scrollPane = new JScrollPane(chatArea);  // Add scroll bar for the chat area
+   // scrollPane.setOpaque(false);  // Make scroll pane transparent
+   // scrollPane.getViewport().setOpaque(false);  // Make viewport (where text is visible) transparent
+
+    // Text field for typing messages
+    JTextField messageField = new JTextField();
+   // messageField.setOpaque(false);  // Make text field transparent
+    messageField.setForeground(Color.BLACK);  // Set text color to white
+    messageField.setCaretColor(Color.BLACK);  // Set caret (cursor) color to white
+
+    // Button to send the message
+    JButton sendButton = new JButton("Send");
+
+    // Panel to hold the message input and send button
+    JPanel inputPanel = new JPanel();
+    inputPanel.setLayout(new BorderLayout());
+    inputPanel.add(messageField, BorderLayout.CENTER);
+    inputPanel.add(sendButton, BorderLayout.EAST);
+
+    // Add the scrollPane and inputPanel to the chatPanel
+    chatPanel.add(scrollPane, BorderLayout.CENTER);
+    chatPanel.add(inputPanel, BorderLayout.SOUTH);
+
+    
+
+    return chatPanel;
+}
+
     
 }
