@@ -16,15 +16,21 @@ public class MainGame {
 
         // Create a layered pane to hold background and grid
         JLayeredPane layeredPane = new JLayeredPane();
-        layeredPane.setPreferredSize(new Dimension(1280, 800)); // Set size of the game window
+        layeredPane.setPreferredSize(new Dimension(1280, 790)); // Set size of the game window
 
         // Add background and grid panel
         layeredPane.add(createBackgroundPanel(), Integer.valueOf(0));  // Background at layer 0
         layeredPane.add(createGridPanel(), Integer.valueOf(1));  // Grid on top at layer 1
 
         JPanel chatPanel = createChatPanel();
-        chatPanel.setBounds(1000, 500, 250, 200);  // Positioning the chat panel in the bottom-right corner
+        chatPanel.setBounds(970, 500, 300, 250);  // Positioning the chat panel in the bottom-right corner
         layeredPane.add(chatPanel, Integer.valueOf(2));  // Chatbox on top at layer 2
+
+        // Create and add the logo panel
+        JPanel logoPanel = createLogoPanel();
+        logoPanel.setBounds(0, 0, 1280, 100);  // Position the logo at the top of the screen
+        layeredPane.add(logoPanel, Integer.valueOf(3));  // Logo on top at layer 3
+
 
         JMenuBar menubar = createMenuBar();
         frame.setJMenuBar(menubar);
@@ -56,7 +62,7 @@ public class MainGame {
                 g.drawImage(bgImage, 0, 0, getWidth(), getHeight(), this);
             }
         };
-        backgroundPanel.setBounds(0, 0, 1280, 800);  // Set size of background panel
+        backgroundPanel.setBounds(0, 0, 1280, 790);  // Set size of background panel
         return backgroundPanel;
     }
 
@@ -229,7 +235,6 @@ public class MainGame {
     JTextField messageField = new JTextField();
    // messageField.setOpaque(false);  // Make text field transparent
     messageField.setForeground(Color.BLACK);  // Set text color to white
-    messageField.setCaretColor(Color.BLACK);  // Set caret (cursor) color to white
 
     // Button to send the message
     JButton sendButton = new JButton("Send");
@@ -248,6 +253,26 @@ public class MainGame {
 
     return chatPanel;
 }
+
+//Method to create Logo
+// Method to create the logo panel
+private JPanel createLogoPanel() {
+    JPanel logoPanel = new JPanel();
+    logoPanel.setLayout(new BorderLayout());
+    logoPanel.setOpaque(false);  // Make the logo panel transparent
+ 
+
+
+    // Load the logo image
+    ImageIcon logoIcon = new ImageIcon("Pictures/logo.png");
+    JLabel logoLabel = new JLabel(logoIcon);
+
+    // Center the logo in the panel
+    logoPanel.add(logoLabel, BorderLayout.CENTER);
+
+    return logoPanel;
+}
+
 
     
 }
