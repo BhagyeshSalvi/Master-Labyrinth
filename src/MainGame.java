@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.border.Border;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,6 +32,12 @@ public class MainGame {
         JPanel logoPanel = createLogoPanel();
         logoPanel.setBounds(0, 0, 1280, 100);  // Position the logo at the top of the screen
         layeredPane.add(logoPanel, Integer.valueOf(3));  // Logo on top at layer 3
+
+        // Create and add the game area panel
+        JPanel gameAreaPanel = createGameAreaPanel();
+        gameAreaPanel.setBounds(1000, 50, 200, 200); //
+        layeredPane.add(gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
+
 
 
         JMenuBar menubar = createMenuBar();
@@ -71,7 +79,10 @@ public class MainGame {
     private JPanel createGridPanel() {
     JPanel gridPanel = new JPanel(new GridBagLayout());
     gridPanel.setOpaque(false);  // Transparent grid to show background
-    gridPanel.setBounds(50, 50, 700, 700);  // Position the grid panel
+    gridPanel.setBounds(100, 100, 458, 458);  // Position the grid panel
+
+    Border border = BorderFactory.createLineBorder(Color.WHITE, 1); // White border with 2px thickness
+    gridPanel.setBorder(border);
 
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.insets = new Insets(0, 0, 0, 0);  // Remove spacing between cells
@@ -120,6 +131,7 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
     // Add the scaled image to the JLabel
     JLabel imageLabel = new JLabel(scaledIcon);
     cell.add(imageLabel,BorderLayout.CENTER);
+    
 
    
     return cell;
@@ -273,6 +285,44 @@ private JPanel createLogoPanel() {
 
     return logoPanel;
 }
+
+private JPanel createGameAreaPanel() {
+    JPanel gameAreaPanel = new JPanel();
+    gameAreaPanel.setLayout(new GridLayout(4, 1)); // Vertical layout for 4 players
+    gameAreaPanel.setOpaque(false); // Make the background transparent if desired
+
+    // Player names and star counts
+    String[] playerNames = {"Player 1", "Player 2", "Player 3", "Player 4"};
+    int[] starCounts = {3, 5, 2, 4}; //  star counts for each player for only gui
+
+    for (int i = 0; i < playerNames.length; i++) {
+        JPanel playerPanel = new JPanel(); // Panel for each player
+        playerPanel.setOpaque(false); // Make each player's panel transparent
+        playerPanel.setLayout(new FlowLayout(FlowLayout.LEFT)); // Aligns content to the left
+
+        JLabel nameLabel = new JLabel(playerNames[i]);
+        nameLabel.setForeground(Color.WHITE); // Set text color to white
+        nameLabel.setFont(new Font("Arial", Font.PLAIN, 24)); // Increase text size
+
+        // Create star labels
+        StringBuilder stars = new StringBuilder();
+        for (int j = 0; j < starCounts[i]; j++) {
+            stars.append("★ "); // Append stars
+        }
+        JLabel starLabel = new JLabel(stars.toString());
+        starLabel.setForeground(Color.lightGray); // Set star color to yellow
+       // starLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Increase star text size
+
+        playerPanel.add(nameLabel); // Add player name to panel
+        playerPanel.add(starLabel); // Add stars to panel
+
+        gameAreaPanel.add(playerPanel); // Add player panel to game area panel
+    }
+
+    return gameAreaPanel; // Return the complete game area panel
+}
+
+
 
 
 
