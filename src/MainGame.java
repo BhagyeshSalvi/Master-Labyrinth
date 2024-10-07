@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -35,8 +36,14 @@ public class MainGame {
 
         // Create and add the game area panel
         JPanel gameAreaPanel = createGameAreaPanel();
-        gameAreaPanel.setBounds(1000, 50, 200, 200); //
+        gameAreaPanel.setBounds(970, 50, 200, 200); //
         layeredPane.add(gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
+
+        // Create and add the insert panel
+        JPanel insertPanel = createInsertPanel();
+        insertPanel.setBounds(650, 470, 200, 150);
+        layeredPane.add(insertPanel, Integer.valueOf(3));  // Insert panel above the game area
+
 
 
 
@@ -229,45 +236,44 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
 
     // Method to create the chat panel
     private JPanel createChatPanel() {
-    JPanel chatPanel = new JPanel();
-    chatPanel.setLayout(new BorderLayout());
-    chatPanel.setPreferredSize(new Dimension(250, 200));  // Size for chat panel
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BorderLayout());
+        chatPanel.setPreferredSize(new Dimension(250, 200));  // Size for chat panel
 
-    // Text area to display chat messages (non-editable)
-    JTextArea chatArea = new JTextArea();
-    chatArea.setEditable(false);  // Users shouldn't edit chat history
-    chatArea.setLineWrap(true);   // Wrap text to the next line
-    chatArea.setWrapStyleWord(true);
-  //  chatArea.setOpaque(false);  // Make text area transparent
-    chatArea.setForeground(Color.BLACK);  // Set text color to white
-    JScrollPane scrollPane = new JScrollPane(chatArea);  // Add scroll bar for the chat area
-   // scrollPane.setOpaque(false);  // Make scroll pane transparent
-   // scrollPane.getViewport().setOpaque(false);  // Make viewport (where text is visible) transparent
+        // Text area to display chat messages (non-editable)
+        JTextArea chatArea = new JTextArea();
+        chatArea.setEditable(false);  // Users shouldn't edit chat history
+        chatArea.setLineWrap(true);   // Wrap text to the next line
+        chatArea.setWrapStyleWord(true);
+    //  chatArea.setOpaque(false);  // Make text area transparent
+        chatArea.setForeground(Color.BLACK);  // Set text color to white
+        JScrollPane scrollPane = new JScrollPane(chatArea);  // Add scroll bar for the chat area
+    // scrollPane.setOpaque(false);  // Make scroll pane transparent
+    // scrollPane.getViewport().setOpaque(false);  // Make viewport (where text is visible) transparent
 
-    // Text field for typing messages
-    JTextField messageField = new JTextField();
-   // messageField.setOpaque(false);  // Make text field transparent
-    messageField.setForeground(Color.BLACK);  // Set text color to white
+        // Text field for typing messages
+        JTextField messageField = new JTextField();
+    // messageField.setOpaque(false);  // Make text field transparent
+        messageField.setForeground(Color.BLACK);  // Set text color to white
 
-    // Button to send the message
-    JButton sendButton = new JButton("Send");
+        // Button to send the message
+        JButton sendButton = new JButton("Send");
 
-    // Panel to hold the message input and send button
-    JPanel inputPanel = new JPanel();
-    inputPanel.setLayout(new BorderLayout());
-    inputPanel.add(messageField, BorderLayout.CENTER);
-    inputPanel.add(sendButton, BorderLayout.EAST);
+        // Panel to hold the message input and send button
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new BorderLayout());
+        inputPanel.add(messageField, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
 
-    // Add the scrollPane and inputPanel to the chatPanel
-    chatPanel.add(scrollPane, BorderLayout.CENTER);
-    chatPanel.add(inputPanel, BorderLayout.SOUTH);
+        // Add the scrollPane and inputPanel to the chatPanel
+        chatPanel.add(scrollPane, BorderLayout.CENTER);
+        chatPanel.add(inputPanel, BorderLayout.SOUTH);
 
-    
+        
 
-    return chatPanel;
-}
+        return chatPanel;
+    }
 
-//Method to create Logo
 // Method to create the logo panel
 private JPanel createLogoPanel() {
     JPanel logoPanel = new JPanel();
@@ -322,9 +328,51 @@ private JPanel createGameAreaPanel() {
     return gameAreaPanel; // Return the complete game area panel
 }
 
+//method to add insertpiece
+private JPanel createInsertPanel() {
+    JPanel insertPanel = new JPanel(); // Panel for the cell image and button
+    insertPanel.setLayout(new BoxLayout(insertPanel, BoxLayout.Y_AXIS)); // Use vertical box layout
+    insertPanel.setOpaque(false); // Make the panel transparent 
 
+    //Select position label
+    JLabel selectPositionLabel = new JLabel("Select Position");
+    selectPositionLabel.setForeground(Color.WHITE); // Set text color
+    selectPositionLabel.setFont(new Font("Arial", Font.PLAIN, 20)); // Set button text size
+    selectPositionLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the label
+    insertPanel.add(selectPositionLabel);
 
+    // Add spacing between label and image
+    insertPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Vertical spacing of 10 pixels
 
+    // Create and load the image for the cell
+    ImageIcon cellImageIcon = new ImageIcon("Pictures\\hallway_horiz.png"); // Replace with your actual image path
+    JLabel cellImageLabel = new JLabel(cellImageIcon);
+    
+    // Set the preferred size for the cell image label
+    cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set image size to 65x65
+    cellImageLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the image
+    cellImageLabel.setBorder(new LineBorder(Color.WHITE, 1));
 
+    
+    // Create the Insert button
+    JButton insertButton = new JButton("Insert");
+    insertButton.setPreferredSize(new Dimension(100, 30)); // Set button size
+    insertButton.setFont(new Font("Arial", Font.BOLD, 20)); // Set button text size
+    insertButton.setForeground(Color.WHITE); // Set button text color
+    insertButton.setOpaque(false); // Make the button transparent
+    insertButton.setContentAreaFilled(false); // Remove the background fill
+    insertButton.setBorderPainted(false); // Remove the border painting
+    //insertButton.setBorder(null); // Remove the border completely
+    insertButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the button
+
+    // Add the image and button to the insert panel
+    insertPanel.add(cellImageLabel);
+    insertPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+    insertPanel.add(insertButton);
+    // Border border = BorderFactory.createLineBorder(Color.WHITE, 1); // White border with 2px thickness
+    // insertPanel.setBorder(border);
+
+    return insertPanel; // Return the complete insert panel
+}
     
 }
