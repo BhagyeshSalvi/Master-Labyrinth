@@ -104,8 +104,8 @@ public class MainGame {
 
     
    // Method to create a single grid cell with an image
-    private JPanel createCellPanel(String imagePath, Dimension cellSize) {
-    JPanel cell = new JPanel();
+private JPanel createCellPanel(String imagePath, Dimension cellSize) {
+    JPanel cell = new JPanel(new BorderLayout());
     cell.setPreferredSize(cellSize);
     cell.setOpaque(false);  // Transparent cell to show background
 
@@ -119,8 +119,9 @@ public class MainGame {
 
     // Add the scaled image to the JLabel
     JLabel imageLabel = new JLabel(scaledIcon);
-    cell.add(imageLabel);
+    cell.add(imageLabel,BorderLayout.CENTER);
 
+   
     return cell;
 }
 
@@ -272,6 +273,7 @@ private JPanel createLogoPanel() {
 
     return logoPanel;
 }
+
 
 
     
