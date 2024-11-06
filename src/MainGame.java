@@ -82,7 +82,10 @@ public class MainGame {
         layeredPane.add(gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
 
         // Create and add the insert panel
-        JPanel insertPanel = createInsertPanel();
+        // Create the Tile object for the insert panel
+        Tile insertTile = new Tile(null, new ImageIcon("Pictures/GridCell/hallway_horiz.png").getImage());
+
+        JPanel insertPanel = createInsertPanel(insertTile);
         insertPanel.setBounds(640, 450, 200, 150);
         layeredPane.add(insertPanel, Integer.valueOf(3));  // Insert panel above the game area
 
@@ -186,35 +189,6 @@ public class MainGame {
         return gridPanel;
     }
     
-
-
-    
-    /**
- * Creates a single grid cell with an image specified by an ImageIcon.
- * 
- * This method initializes a JPanel that represents a cell in the grid. 
- * The cell displays an image from the provided ImageIcon, scaled to fit 
- * the specified cell size. The cell is transparent to show the background.
- * 
- * @param icon the ImageIcon to be displayed in the cell.
- * @param cellSize the preferred size of the cell.
- * @return the newly created JPanel representing a grid cell containing the image.
- */
-private JPanel createCellPanel(ImageIcon icon, Dimension cellSize) {
-    JPanel cell = new JPanel(new BorderLayout());
-    cell.setPreferredSize(cellSize);
-    cell.setOpaque(false);  // Transparent cell to show background
-
-    // Scale the image to fit the cell size
-    Image scaledImage = icon.getImage().getScaledInstance(cellSize.width, cellSize.height, Image.SCALE_SMOOTH);
-    ImageIcon scaledIcon = new ImageIcon(scaledImage);
-
-    // Add the scaled image to the JLabel
-    JLabel imageLabel = new JLabel(scaledIcon);
-    cell.add(imageLabel, BorderLayout.CENTER);
-
-    return cell;
-}
 
 /**
  * Creates a single grid cell with an image specified by a path.
@@ -391,43 +365,69 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
     private JPanel createChatPanel() {
         JPanel chatPanel = new JPanel();
         chatPanel.setLayout(new BorderLayout());
-        chatPanel.setPreferredSize(new Dimension(150, 200));  // Size for chat panel
-
-        // Text area to display chat messages 
+        chatPanel.setPreferredSize(new Dimension(150, 200)); // Size for chat panel
+        chatPanel.setOpaque(false); // Transparent background
+    
+        // Text area to display chat messages
         JTextArea chatArea = new JTextArea();
-        chatArea.setEditable(false);  // Users shouldn't edit chat history
-        chatArea.setLineWrap(true);   // Wrap text to the next line
+        chatArea.setEditable(false); // Users shouldn't edit chat history
+        chatArea.setLineWrap(true);  // Wrap text to the next line
         chatArea.setWrapStyleWord(true);
-        chatArea.setForeground(Color.BLACK);  // Set text color to black
-        chatArea.setBackground(new Color(0, 0, 0, 0)); // Make background transparent
-        JScrollPane scrollPane = new JScrollPane(chatArea);  // Add scroll bar for the chat area
-        scrollPane.setOpaque(false);  // Make scroll pane transparent
-        scrollPane.getViewport().setOpaque(false);  // Make viewport (where text is visible) transparent
-
+        chatArea.setForeground(Color.WHITE); // Set text color to white
+        chatArea.setFont(new Font("Arial", Font.BOLD, 14)); // Set text to bold
+        chatArea.setOpaque(false); // Transparent background for text area
+    
+        JScrollPane scrollPane = new JScrollPane(chatArea);
+        scrollPane.setOpaque(false); // Transparent scroll pane
+        scrollPane.getViewport().setOpaque(false); // Transparent viewport
+    
         // Text field for typing messages
         JTextField messageField = new JTextField();
-        messageField.setOpaque(false);  // Make text field transparent
-        messageField.setForeground(Color.BLACK);  // Set text color to black
-        messageField.setBackground(new Color(0, 0, 0, 0)); // Make background transparent
-        messageField.setBorder(BorderFactory.createEmptyBorder()); // Remove border
-
+        messageField.setForeground(Color.BLACK); // Set text color to white
+        messageField.setFont(new Font("Arial", Font.BOLD, 14)); // Bold text for input field
+        //messageField.setOpaque(false); // Transparent background
+       // messageField.setBorder(BorderFactory.createEmptyBorder()); // Remove border
+    
         // Button to send the message
         JButton sendButton = new JButton("Send");
-
+        sendButton.setFont(new Font("Arial", Font.BOLD, 12)); // Bold text for button
+        sendButton.setForeground(Color.WHITE); // Set button text to white
+        sendButton.setOpaque(false); // Transparent background for button
+        sendButton.setContentAreaFilled(false); // Remove content fill for transparency
+        sendButton.setBorder(BorderFactory.createLineBorder(Color.WHITE)); // Add white border
+    
+        // Action listener for the send button
+        sendButton.addActionListener(e -> {
+            String message = messageField.getText().trim();
+            if (!message.isEmpty()) {
+                chatArea.append("Player: " + message + "\n"); // Append message to chat area
+                messageField.setText(""); // Clear the input field
+            }
+        });
+    
+        // Allow sending messages with the Enter key
+        messageField.addActionListener(e -> {
+            String message = messageField.getText().trim();
+            if (!message.isEmpty()) {
+                chatArea.append("Player: " + message + "\n");
+                messageField.setText("");
+            }
+        });
+    
         // Panel to hold the message input and send button
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new BorderLayout());
+        JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.add(messageField, BorderLayout.CENTER);
         inputPanel.add(sendButton, BorderLayout.EAST);
-
-        chatPanel.setOpaque(false);
-
-        // Add the scrollPane and inputPanel to the chatPanel
+        inputPanel.setOpaque(false); // Transparent background for input panel
+    
+        // Add components to chat panel
         chatPanel.add(scrollPane, BorderLayout.CENTER);
         chatPanel.add(inputPanel, BorderLayout.SOUTH);
-
-        return chatPanel;
+    
+        return chatPanel; // Return the transparent chat panel
     }
+    
+
 
 
     /**
@@ -513,7 +513,7 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
  * @return a JPanel configured for inserting a piece, containing a label,
  *         an image, and the buttons.
  */
-private JPanel createInsertPanel() {
+private JPanel createInsertPanel(Tile insertTile) {
     JPanel insertPanel = new JPanel(); // Panel for the cell image and button
     insertPanel.setLayout(new BoxLayout(insertPanel, BoxLayout.Y_AXIS)); // Use vertical box layout
     insertPanel.setOpaque(false); // Make the panel transparent 
@@ -529,8 +529,7 @@ private JPanel createInsertPanel() {
     insertPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Vertical spacing of 5 pixels
 
     // Create and load the image for the cell
-    ImageIcon cellImageIcon = new ImageIcon("Pictures/GridCell/hallway_horiz.png");
-    JLabel cellImageLabel = new JLabel(cellImageIcon);
+    JLabel cellImageLabel = new JLabel(new ImageIcon(insertTile.getImage())); // Load tile's initial image
     cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set image size to 65x65
     cellImageLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the image
     cellImageLabel.setBorder(new LineBorder(Color.WHITE, 1));
@@ -560,6 +559,15 @@ private JPanel createInsertPanel() {
     rotateButton.setBorderPainted(false); // Remove border painting
     rotateButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+    // Add action listener to Rotate button
+    rotateButton.addActionListener(e -> {
+        // Rotate the tile
+        insertTile.rotateClockwise();
+
+        // Update the image label to reflect the new rotation
+        cellImageLabel.setIcon(new ImageIcon(insertTile.getImage()));
+    });
+
     // Add both buttons to the button panel
     buttonPanel.add(insertButton);
     buttonPanel.add(rotateButton);
@@ -571,6 +579,7 @@ private JPanel createInsertPanel() {
 
     return insertPanel; // Return the complete insert panel
 }
+
 
 private static final Point[] PLAYER_START_POSITIONS = {
     new Point(4, 4), // Player 1 starts at (row 4, column 4)
