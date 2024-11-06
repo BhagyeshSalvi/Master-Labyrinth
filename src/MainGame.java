@@ -9,6 +9,7 @@ import javax.swing.border.LineBorder;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -62,7 +63,7 @@ public class MainGame {
         // Add background and grid panel
         layeredPane.add(createBackgroundPanel(), Integer.valueOf(0));  // Background at layer 0
        // layeredPane.add(createGridPanel(), Integer.valueOf(1));  // Grid on top at layer 1
-       JLayeredPane layeredGridWithPlayers = createGridWithPlayers();
+       JLayeredPane layeredGridWithPlayers = createGridWithPlayersAndTokens();
        layeredPane.add(layeredGridWithPlayers, Integer.valueOf(1)); // Add the grid with players
 
 
@@ -135,54 +136,56 @@ public class MainGame {
     }
 
     
-    /**
-     * Creates the grid panel representing the maze.
-     * 
-     * This method initializes a JPanel using a GridBagLayout to arrange cells in a 7x7 grid.
-     * Each cell is a JPanel containing an image, which is randomly selected from a generated list 
-     * of images based on specified frequencies. The grid panel has a white border and is 
-     * transparent to allow the background to show through.
-     * 
-     * @return the newly created JPanel that represents the maze grid.
-     */
     private JPanel createGridPanel() {
         JPanel gridPanel = new JPanel(new GridBagLayout());
-        gridPanel.setOpaque(false);  // Transparent grid to show background
-        gridPanel.setBounds(100, 100, 458, 458);  // Position the grid panel
-
-        Border border = BorderFactory.createLineBorder(Color.WHITE, 1); // White border with 1px thickness
-        gridPanel.setBorder(border);
-
+        gridPanel.setOpaque(false);
+        gridPanel.setBounds(50, 50, 650, 650); // Adjust size for 9x9 grid
+    
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 0, 0, 0);  // Remove spacing between cells
-
-        // Get the list of images based on specified frequencies
+        Dimension cellSize = new Dimension(60, 60); // Each cell's size
+    
         List<String> imageList = generateImageList();
-        Collections.shuffle(imageList);  // Randomize image placement
-
-        // Set preferred size for each grid cell
-        Dimension cellSize = new Dimension(65, 65);
+        Collections.shuffle(imageList);
+    
         int imageIndex = 0;
-
-        // Loop to create 7x7 grid
-        for (int row = 0; row < 7; row++) {
-            for (int col = 0; col < 7; col++) {
+    
+        for (int row = 0; row < 9; row++) {
+            for (int col = 0; col < 9; col++) {
                 gbc.gridx = col;
                 gbc.gridy = row;
-
-                // Create a JPanel for each cell
-                JPanel cell = createCellPanel(imageList.get(imageIndex), cellSize);
-                gridPanel.add(cell, gbc);
-
-                imageIndex++;  // Move to the next image in the shuffled list
+    
+                if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
+                    // Add side cells: left (col 0) and right (col 8)
+                    String imagePath = col == 0 ? "Pictures/GridCell/insert_right.png" : "Pictures/GridCell/insert_left.png";
+                    System.out.println("Adding side cell at row: " + row + ", col: " + col + ", path: " + imagePath);
+                    JPanel sideCell = createCellPanel(imagePath, cellSize);
+                    gridPanel.add(sideCell, gbc);
+                } else if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
+                    // Add side cells: top (row 0) and bottom (row 8)
+                    String imagePath = row == 0 ? "Pictures/GridCell/insert_down.png" : "Pictures/GridCell/insert_up.png";
+                    System.out.println("Adding side cell at row: " + row + ", col: " + col + ", path: " + imagePath);
+                    JPanel sideCell = createCellPanel(imagePath, cellSize);
+                    gridPanel.add(sideCell, gbc);
+                } else if (row >= 1 && row <= 7 && col >= 1 && col <= 7) {
+                    // Add internal grid cells (7x7 grid)
+                    System.out.println("Adding grid cell at row: " + row + ", col: " + col);
+                    JPanel internalCell = createCellPanel(imageList.get(imageIndex), cellSize);
+                    gridPanel.add(internalCell, gbc);
+                    imageIndex++;
+                } else {
+                    // Add empty corners (transparent cells)
+                    System.out.println("Adding empty corner at row: " + row + ", col: " + col);
+                    JPanel emptyCell = new JPanel();
+                    emptyCell.setPreferredSize(cellSize);
+                    emptyCell.setOpaque(false); // Make the cell completely transparent
+                    gridPanel.add(emptyCell, gbc);
+                }
             }
         }
-
+    
         return gridPanel;
     }
-
     
-
 
 
     
@@ -224,10 +227,41 @@ private JPanel createCellPanel(ImageIcon icon, Dimension cellSize) {
  * @param cellSize the preferred size of the cell.
  * @return the newly created JPanel representing a grid cell containing the image.
  */
+/**
+ * Creates a single grid cell with an image.
+ * 
+ * This method initializes a JPanel that represents a cell in the grid.
+ * The cell displays an image from the provided image path, scaled to fit
+ * the specified cell size. If the image fails to load, a default empty cell is created.
+ * 
+ * @param imagePath The path to the image to be displayed in the cell.
+ * @param cellSize The preferred size of the cell.
+ * @return The newly created JPanel representing a grid cell.
+ */
 private JPanel createCellPanel(String imagePath, Dimension cellSize) {
-    ImageIcon originalIcon = new ImageIcon(imagePath);
-    return createCellPanel(originalIcon, cellSize);
+    JPanel cell = new JPanel(new BorderLayout());
+    cell.setPreferredSize(cellSize);
+    cell.setOpaque(false); // Make the cell transparent
+
+    try {
+        // Load and scale the image
+        ImageIcon originalIcon = new ImageIcon(imagePath);
+        Image scaledImage = originalIcon.getImage().getScaledInstance(cellSize.width, cellSize.height, Image.SCALE_SMOOTH);
+        ImageIcon scaledIcon = new ImageIcon(scaledImage);
+
+        // Add the image to a JLabel and center it
+        JLabel imageLabel = new JLabel(scaledIcon);
+        cell.add(imageLabel, BorderLayout.CENTER);
+    } catch (Exception e) {
+        System.err.println("Failed to load image: " + imagePath);
+        // Fallback to an empty cell with a placeholder background color
+        cell.setBackground(Color.RED); // Placeholder for debugging
+        cell.setOpaque(true); // Make the cell visible for debugging
+    }
+
+    return cell;
 }
+
 
 
 
@@ -243,17 +277,17 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
      */
     private List<String> generateImageList() {
         String[] imagePaths = {
-            "Pictures/brick_cross.png",  // Cross - 2 times 
-            "Pictures/brick_cross.png",  // Vertical - 8 times
-            "Pictures/hallway_horiz.png",  // Horizontal - 7 times
-            "Pictures/brick_NE.png",  // northeast - 4 times
-            "Pictures/brick_NW.png",  // northwest - 4 times
-            "Pictures/brick_SE.png",  // southeast - 4 times
-            "Pictures/brick_SW.png",  // southwest - 4 times
-            "Pictures/brick_Teast.png", // T-east - 4 times
-            "Pictures/brick_Twest.png", // T-west - 4 times
-            "Pictures/brick_Tnorth.png", // T-north - 4 times
-            "Pictures/brick_Tsouth.png", // T-south - 4 times
+            "Pictures/GridCell/brick_cross.png",  // Cross - 2 times 
+            "Pictures/GridCell/brick_cross.png",  // Vertical - 8 times
+            "Pictures/GridCell/hallway_horiz.png",  // Horizontal - 7 times
+            "Pictures/GridCell/brick_NE.png",  // northeast - 4 times
+            "Pictures/GridCell/brick_NW.png",  // northwest - 4 times
+            "Pictures/GridCell/brick_SE.png",  // southeast - 4 times
+            "Pictures/GridCell/brick_SW.png",  // southwest - 4 times
+            "Pictures/GridCell/brick_Teast.png", // T-east - 4 times
+            "Pictures/GridCell/brick_Twest.png", // T-west - 4 times
+            "Pictures/GridCell/brick_Tnorth.png", // T-north - 4 times
+            "Pictures/GridCell/brick_Tsouth.png", // T-south - 4 times
         };
 
         // Create a list to store images according to their usage frequency
@@ -495,7 +529,7 @@ private JPanel createInsertPanel() {
     insertPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Vertical spacing of 5 pixels
 
     // Create and load the image for the cell
-    ImageIcon cellImageIcon = new ImageIcon("Pictures/hallway_horiz.png");
+    ImageIcon cellImageIcon = new ImageIcon("Pictures/GridCell/hallway_horiz.png");
     JLabel cellImageLabel = new JLabel(cellImageIcon);
     cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set image size to 65x65
     cellImageLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the image
@@ -538,44 +572,81 @@ private JPanel createInsertPanel() {
     return insertPanel; // Return the complete insert panel
 }
 
-// Define starting positions for players in grid coordinates (row, col)
 private static final Point[] PLAYER_START_POSITIONS = {
-    new Point(2, 2), // Player 1
-    new Point(2, 4), // Player 2
-    new Point(4, 2), // Player 3
-    new Point(4, 4)  // Player 4
+    new Point(4, 4), // Player 1 starts at (row 4, column 4)
+    new Point(4, 6), // Player 2 starts at (row 4, column 6)
+    new Point(6, 4), // Player 3 starts at (row 6, column 4)
+    new Point(6, 6)  // Player 4 starts at (row 6, column 6)
 };
 
-private JLayeredPane createGridWithPlayers() {
-    // Layered pane to hold grid and player pieces
+// Define starting positions for players in grid coordinates (row, col)
+private JLayeredPane createGridWithPlayersAndTokens() {
+    // Layered pane to hold grid, player pieces, and tokens
     JLayeredPane layeredGridPane = new JLayeredPane();
-    layeredGridPane.setPreferredSize(new Dimension(458, 458)); // Same size as the grid
-    layeredGridPane.setBounds(100, 100, 458, 458);
+    layeredGridPane.setPreferredSize(new Dimension(650, 650)); // Match the grid size
+    layeredGridPane.setBounds(50, 50, 650, 650);
 
     // Create the grid panel
     JPanel gridPanel = createGridPanel();
-    gridPanel.setBounds(0, 0, 458, 458); // Align to the top-left of the layered pane
+    gridPanel.setBounds(0, 0, 650, 650); // Align grid panel within the layered pane
 
-    // Add grid to the bottom layer
+    // Add the grid panel to the bottom layer
     layeredGridPane.add(gridPanel, Integer.valueOf(0)); // Grid is layer 0
 
     // Add player pieces on the next layer
+    int cellSize = 60; // Each grid cell is 60x60
+    int playerSize = 25; // Player image size is 25x25
+
+    // Add player pieces
     for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
-        Point position = PLAYER_START_POSITIONS[i];
-        JLabel playerLabel = createPlayerLabel(i + 1, 20); // 40 is the size of the player image
-        int x = position.x * 65 + (65 - 40) / 2; // Calculate x-position
-        int y = position.y * 65 + (65 - 40) / 2; // Calculate y-position
-        playerLabel.setBounds(x, y, 40, 40); // Set position and size
+        Point position = PLAYER_START_POSITIONS[i]; // Get player's starting position (row, col)
+        JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
+
+        // Calculate player position relative to the grid cell size (60x60)
+        int x = position.y * cellSize + (cellSize - playerSize) / 2; // Center the player horizontally
+        int y = position.x * cellSize + (cellSize - playerSize) / 2; // Center the player vertically
+        playerLabel.setBounds(x, y, playerSize, playerSize); // Set position and size of the player
+
         layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add players on layer 1
+    }
+
+    // Define the square pattern for token positions
+    List<Point> tokenPositions = Arrays.asList(
+        new Point(3, 3), new Point(3, 4), new Point(3, 5), new Point(3, 6), new Point(3, 7),
+        new Point(4, 7), new Point(5, 7), new Point(6, 7), new Point(7, 7),
+        new Point(7, 6), new Point(7, 5), new Point(7, 4), new Point(7, 3),
+        new Point(6, 3), new Point(5, 3), new Point(4, 3)
+    );
+
+    // Randomize token images
+    String[] tokenPaths = generateTokenPaths(); // Assume this returns the paths for token images
+    Collections.shuffle(Arrays.asList(tokenPaths)); // Shuffle the tokens
+
+    // Add tokens in the randomized order
+    int tokenSize = 20; // Token size (smaller than players)
+    for (int i = 0; i < tokenPositions.size(); i++) {
+        Point position = tokenPositions.get(i); // Get token position
+        JLabel tokenLabel = createTokenLabel(tokenPaths[i], tokenSize);
+
+        // Calculate token position relative to the grid cell size (60x60)
+        int x = position.y * cellSize + (cellSize - tokenSize) / 2; // Center the token horizontally
+        int y = position.x * cellSize + (cellSize - tokenSize) / 2; // Center the token vertically
+        tokenLabel.setBounds(x, y, tokenSize, tokenSize); // Set position and size of the token
+
+        layeredGridPane.add(tokenLabel, Integer.valueOf(1)); // Add tokens on layer 1
     }
 
     return layeredGridPane;
 }
 
+
+
+
+
 private JLabel createPlayerLabel(int playerNumber, int size) {
     // Use different images/colors for each player
     String[] playerColors = {"red", "blue", "green", "yellow"};
-    String imagePath = "Pictures/" + playerColors[playerNumber - 1] + ".png";
+    String imagePath = "Pictures/PlayerPiece/" + playerColors[playerNumber - 1] + ".png";
     ImageIcon playerIcon = new ImageIcon(imagePath);
 
     // Scale the image
@@ -583,6 +654,27 @@ private JLabel createPlayerLabel(int playerNumber, int size) {
     JLabel playerLabel = new JLabel(new ImageIcon(scaledImage));
     playerLabel.setOpaque(false); // Transparent background
     return playerLabel;
+}
+
+private String[] generateTokenPaths() {
+    return new String[]{
+        "Pictures/Token/gold_1.png", "Pictures/Token/gold_2.png", "Pictures/Token/gold_3.png",
+        "Pictures/Token/gold_4.png", "Pictures/Token/gold_5.png", "Pictures/Token/gold_6.png",
+        "Pictures/Token/gold_7.png", "Pictures/Token/gold_8.png", "Pictures/Token/gold_9.png",
+        "Pictures/Token/gold_10.png", "Pictures/Token/gold_11.png", "Pictures/Token/gold_12.png",
+        "Pictures/Token/gold_13.png", "Pictures/Token/gold_14.png", "Pictures/Token/gold_15.png",
+        "Pictures/Token/gold_16.png"
+    };
+}
+
+private JLabel createTokenLabel(String imagePath, int size) {
+    ImageIcon tokenIcon = new ImageIcon(imagePath);
+
+    // Scale the image
+    Image scaledImage = tokenIcon.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
+    JLabel tokenLabel = new JLabel(new ImageIcon(scaledImage));
+    tokenLabel.setOpaque(false); // Transparent background
+    return tokenLabel;
 }
 
 
