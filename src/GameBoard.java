@@ -60,9 +60,9 @@ public class GameBoard {
                            " | Valid: " + isValidPosition(newPosition));
     
         // Validate the position
-        if (isValidPosition(newPosition)) {
+        if (isValidPosition(newPosition) && !isTileOccupied(newPosition)) {
             player.setPosition(newPosition); // Update player's logical position
-            return true;
+            return true; // Valid move
         }
     
         return false; // Invalid move
@@ -75,6 +75,15 @@ public class GameBoard {
         // Ensure the position is within the playable grid (2 to 8 for both rows and cols)
         return position.x >= 2 && position.x <= 8 &&
                position.y >= 2 && position.y <= 8;
+    }
+    
+    public boolean isTileOccupied(Point position) {
+        for (Player player : players) { // Iterate through all players
+            if (player.getPosition().equals(position)) {
+                return true; // Tile is occupied by another player
+            }
+        }
+        return false; // Tile is not occupied
     }
     
     

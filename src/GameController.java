@@ -10,15 +10,17 @@ public class GameController {
     }
 
     public void handleMovement(int playerIndex, String direction) {
-        Player currentPlayer = gameBoard.getPlayers()[playerIndex]; // Access player
+        Player currentPlayer = gameBoard.getPlayers()[playerIndex];
         Point oldPosition = currentPlayer.getPosition();
-
+    
         if (gameBoard.movePlayer(currentPlayer, direction)) {
             Point newPosition = currentPlayer.getPosition();
-            System.out.println("Moved to: " + newPosition); // Debugging
-            view.updatePlayerPosition(playerIndex, newPosition);
+            System.out.println("Player moved to: " + newPosition);
+            view.updatePlayerPosition(playerIndex, newPosition); // Update the UI
         } else {
             System.out.println("Invalid move from " + oldPosition + " in direction " + direction);
+            view.showInvalidMoveDialog(); // Show dialog for invalid move
         }
     }
+    
 }

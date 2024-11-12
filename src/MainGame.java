@@ -443,6 +443,8 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
                 chatArea.append("Player: " + message + "\n"); // Append message to chat area
                 messageField.setText(""); // Clear the input field
             }
+            //regaining focus after hiting enter key
+            SwingUtilities.getWindowAncestor(chatPanel).requestFocusInWindow();
         });
     
         // Allow sending messages with the Enter key
@@ -452,6 +454,9 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
                 chatArea.append("Player: " + message + "\n");
                 messageField.setText("");
             }
+
+            //regainng focus after hiting enter key
+            SwingUtilities.getWindowAncestor(chatPanel).requestFocusInWindow();
         });
     
         // Panel to hold the message input and send button
@@ -787,6 +792,7 @@ public void updatePlayerPosition(int playerIndex, Point newPosition) {
     playerLabel.repaint(); // Refresh the UI
 }
 
+//Key listener to move player
 private void setupKeyListeners(JFrame frame, GameController controller) {
     frame.addKeyListener(new KeyAdapter() {
         @Override
@@ -812,6 +818,17 @@ private void setupKeyListeners(JFrame frame, GameController controller) {
         }
     });
 }
+
+//dialog box to show invalid move
+public void showInvalidMoveDialog() {
+    JOptionPane.showMessageDialog(
+        null,
+        "You cannot move to that tile. It's occupied or out of bounds!",
+        "Invalid Move",
+        JOptionPane.WARNING_MESSAGE
+    );
+}
+
 
 
 
