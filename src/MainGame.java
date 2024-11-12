@@ -8,10 +8,12 @@ import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 
 import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.awt.event.*;
 
 /**
  * 
@@ -20,6 +22,9 @@ import java.util.List;
  *
  */
 public class MainGame {
+
+    private GameBoard gameBoard;
+
 	
 	
 	/**
@@ -54,6 +59,18 @@ public class MainGame {
      * non-resizable. Finally, the frame is made visible.
      */
     public void createAndShowGame() {
+
+        // Initialize players
+    Player[] players = {
+        new Player("Player 1", new Point(4, 4), Color.RED),
+        new Player("Player 2", new Point(4, 6), Color.BLUE),
+        new Player("Player 3", new Point(6, 4), Color.GREEN),
+        new Player("Player 4", new Point(6, 6), Color.YELLOW)
+    };
+
+    // Initialize the game board
+    gameBoard = new GameBoard(9, players);
+
         JFrame frame = createFrame();
 
         // Create a layered pane to hold background and grid
@@ -71,11 +88,17 @@ public class MainGame {
         chatPanel.setBounds(970, 490, 300, 250);  // Positioning the chat panel in the bottom-right corner
         layeredPane.add(chatPanel, Integer.valueOf(2));  // Chatbox on top at layer 2
 
+       
         // Create and add the logo panel
         JPanel logoPanel = createLogoPanel();
         logoPanel.setBounds(0, 0, 1280, 100);  // Position the logo at the top of the screen
         layeredPane.add(logoPanel, Integer.valueOf(3));  // Logo on top at layer 3
 
+            // Add magical components panel
+        JPanel magicalComponentsPanel = createMagicalComponentsPanel();
+        magicalComponentsPanel.setBounds(970, 300, 300, 150); // Position between chatPanel and gameAreaPanel
+        layeredPane.add(magicalComponentsPanel, Integer.valueOf(3));
+        
         // Create and add the game area panel
         JPanel gameAreaPanel = createGameAreaPanel();
         gameAreaPanel.setBounds(970, 50, 200, 200);
@@ -98,8 +121,17 @@ public class MainGame {
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.setVisible(true);
+        frame.setFocusable(true);
+        frame.requestFocusInWindow();
+
+
+        // Setup key listeners
+    GameController controller = new GameController(gameBoard, this); // Pass game board and view
+    setupKeyListeners(frame, controller);
     }
 
+
+   
 
     /**
      * Creates the main game frame for the Labyrinth game.
@@ -347,6 +379,14 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
         menuBar.add(gameMenu);
         menuBar.add(helpMenu);
 
+        // Add Change Language menu at the end
+        JMenu changeLanguageMenu = new JMenu("Change Language");
+
+        menuBar.add(Box.createHorizontalGlue()); // Push "Change Language" to the right
+        menuBar.add(changeLanguageMenu);
+    
+
+
         return menuBar;
     }
 
@@ -588,6 +628,11 @@ private static final Point[] PLAYER_START_POSITIONS = {
     new Point(6, 6)  // Player 4 starts at (row 6, column 6)
 };
 
+private JLabel[] playerLabels; // Array to store player JLabels
+private static final int cellSize = 60; // Size of a grid cell
+private static final int playerSize = 25; // Size of a player label
+
+
 // Define starting positions for players in grid coordinates (row, col)
 private JLayeredPane createGridWithPlayersAndTokens() {
     // Layered pane to hold grid, player pieces, and tokens
@@ -602,22 +647,22 @@ private JLayeredPane createGridWithPlayersAndTokens() {
     // Add the grid panel to the bottom layer
     layeredGridPane.add(gridPanel, Integer.valueOf(0)); // Grid is layer 0
 
-    // Add player pieces on the next layer
-    int cellSize = 60; // Each grid cell is 60x60
-    int playerSize = 25; // Player image size is 25x25
+   // Initialize player labels array
+   playerLabels = new JLabel[PLAYER_START_POSITIONS.length];
 
-    // Add player pieces
-    for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
-        Point position = PLAYER_START_POSITIONS[i]; // Get player's starting position (row, col)
-        JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
+   // Add player pieces
+   for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
+       Point position = PLAYER_START_POSITIONS[i];
+       JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
 
-        // Calculate player position relative to the grid cell size (60x60)
-        int x = position.y * cellSize + (cellSize - playerSize) / 2; // Center the player horizontally
-        int y = position.x * cellSize + (cellSize - playerSize) / 2; // Center the player vertically
-        playerLabel.setBounds(x, y, playerSize, playerSize); // Set position and size of the player
+       // Calculate player position
+       int x = position.y * cellSize + (cellSize - playerSize) / 2;
+       int y = position.x * cellSize + (cellSize - playerSize) / 2;
+       playerLabel.setBounds(x, y, playerSize, playerSize);
 
-        layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add players on layer 1
-    }
+       layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add player to layer 1
+       playerLabels[i] = playerLabel; // Store reference to player label
+   }
 
     // Define the square pattern for token positions
     List<Point> tokenPositions = Arrays.asList(
@@ -686,9 +731,94 @@ private JLabel createTokenLabel(String imagePath, int size) {
     return tokenLabel;
 }
 
+private JPanel createMagicalComponentsPanel() {
+    // Create a panel for the magical components
+    JPanel magicalPanel = new JPanel();
+    magicalPanel.setLayout(new GridLayout(1, 3, 10, 10)); // 1 row, 3 columns, with spacing
+    magicalPanel.setOpaque(false); // Transparent background
+
+    // Magical component file paths
+    String[] componentPaths = {
+        "Pictures/MG1.png",
+        "Pictures/MG2.png",
+        "Pictures/MG3.png",
+       
+    };
+
+    for (String componentPath : componentPaths) {
+        try {
+            // Load the image
+            ImageIcon componentIcon = new ImageIcon(componentPath);
+            Image scaledImage = componentIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+
+            // Add image to a JLabel
+            JLabel componentLabel = new JLabel(new ImageIcon(scaledImage));
+            componentLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            componentLabel.setVerticalAlignment(SwingConstants.CENTER);
+            
 
 
-    
+            // Add component label to the panel
+            magicalPanel.add(componentLabel);
+        } catch (Exception e) {
+            System.err.println("Error loading magical component image: " + componentPath);
+            // Add a placeholder label for missing or failed images
+            JLabel errorLabel = new JLabel("Error");
+            errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            errorLabel.setVerticalAlignment(SwingConstants.CENTER);
+            magicalPanel.add(errorLabel);
+        }
+    }
+
+    // Set preferred size for the magical components panel
+    //magicalPanel.setPreferredSize(new Dimension(300, 150));
+    return magicalPanel;
+}
+
+public void updatePlayerPosition(int playerIndex, Point newPosition) {
+    JLabel playerLabel = playerLabels[playerIndex]; // Get the player's JLabel
+
+    // Calculate new position in the grid
+    int x = newPosition.y * cellSize + (cellSize - playerSize) / 2;
+    int y = newPosition.x * cellSize + (cellSize - playerSize) / 2;
+
+    // Update the label's position
+    playerLabel.setBounds(x, y, playerSize, playerSize);
+    playerLabel.repaint(); // Refresh the UI
+}
+
+private void setupKeyListeners(JFrame frame, GameController controller) {
+    frame.addKeyListener(new KeyAdapter() {
+        @Override
+        public void keyPressed(KeyEvent e) {
+            String direction = null;
+            switch (e.getKeyCode()) {
+                case KeyEvent.VK_UP:
+                    direction = "up";
+                    break;
+                case KeyEvent.VK_DOWN:
+                    direction = "down";
+                    break;
+                case KeyEvent.VK_LEFT:
+                    direction = "left";
+                    break;
+                case KeyEvent.VK_RIGHT:
+                    direction = "right";
+                    break;
+            }
+            if (direction != null) {
+                controller.handleMovement(0, direction); // Assuming Player 0 for now
+            }
+        }
+    });
+}
+
+
+
+
+
+
+
 
     
 }
