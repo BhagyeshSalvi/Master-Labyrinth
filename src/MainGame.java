@@ -22,9 +22,30 @@ import java.awt.event.*;
  *
  */
 public class MainGame {
-
+    
     private GameBoard gameBoard;
+    private GameController gameController;
+    private JPanel insertPanel; 
+    private JLayeredPane layeredPane; 
+    private JPanel gridPanel;        
+    
+    Tile currentInsertTile = new Tile(null, new ImageIcon("Pictures/GridCell/hallway_horiz.png").getImage());
 
+    public MainGame(){
+        Player[] players = {
+            new Player("Player 1", new Point(4, 4), Color.RED),
+            new Player("Player 2", new Point(4, 6), Color.BLUE),
+            new Player("Player 3", new Point(6, 4), Color.GREEN),
+            new Player("Player 4", new Point(6, 6), Color.YELLOW)
+        };
+        GameBoard gameBoard = new GameBoard(9, players);
+        this.gameController = new GameController(gameBoard); // Initialize GameController
+        
+    }
+    
+    public MainGame(GameController gameController){
+        this.gameController=gameController;
+    }
 	
 	
 	/**
@@ -32,8 +53,12 @@ public class MainGame {
 	 * @param args
 	 */
     public static void main(String[] args) {
-        new MainGame().createAndShowGame();
+        // Launch the game
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            new MainGame().createAndShowGame();
+        });
     }
+    
 
     
     /**
@@ -61,20 +86,22 @@ public class MainGame {
     public void createAndShowGame() {
 
         // Initialize players
-    Player[] players = {
-        new Player("Player 1", new Point(4, 4), Color.RED),
-        new Player("Player 2", new Point(4, 6), Color.BLUE),
-        new Player("Player 3", new Point(6, 4), Color.GREEN),
-        new Player("Player 4", new Point(6, 6), Color.YELLOW)
-    };
+        Player[] players = {
+            new Player("Player 1", new Point(4, 4), Color.RED),
+            new Player("Player 2", new Point(4, 6), Color.BLUE),
+            new Player("Player 3", new Point(6, 4), Color.GREEN),
+            new Player("Player 4", new Point(6, 6), Color.YELLOW)
+        };
 
-    // Initialize the game board
-    gameBoard = new GameBoard(9, players);
+        // Initialize the game board
+        gameBoard = new GameBoard(9, players);
+        this.gameController = new GameController(gameBoard,this);
+
 
         JFrame frame = createFrame();
 
         // Create a layered pane to hold background and grid
-        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane = new JLayeredPane();
         layeredPane.setPreferredSize(new Dimension(1280, 750)); // Set size of the game window
 
         // Add background and grid panel
@@ -106,9 +133,8 @@ public class MainGame {
 
         // Create and add the insert panel
         // Create the Tile object for the insert panel
-        Tile insertTile = new Tile(null, new ImageIcon("Pictures/GridCell/hallway_horiz.png").getImage());
-
-        JPanel insertPanel = createInsertPanel(insertTile);
+        String initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Initial image path for the InsertPanel
+        insertPanel = createInsertPanel(initialImagePath);
         insertPanel.setBounds(640, 450, 200, 150);
         layeredPane.add(insertPanel, Integer.valueOf(3));  // Insert panel above the game area
 
@@ -130,6 +156,62 @@ public class MainGame {
     setupKeyListeners(frame, controller);
     }
 
+
+    
+
+    public void setController(GameController controller) {
+        this.gameController = controller;
+    }
+
+    public void updateInsertPanelTile(Tile newTile) {
+        if (newTile == null) {
+            System.err.println("Error: InsertPanel tile is null.");
+            return;
+        }
+        currentInsertTile = newTile; // Update logic
+        JLabel cellImageLabel = (JLabel) insertPanel.getComponent(0); // Access label
+        cellImageLabel.setIcon(new ImageIcon(newTile.getImage())); // Update image
+        cellImageLabel.repaint(); // Force repaint
+    }
+    
+    
+    
+    public void updateGrid(GameBoard gameBoard) {
+        for (int row = 1; row <= 7; row++) { // Playable rows only
+            for (int col = 1; col <= 7; col++) { // Playable columns only
+                Tile tile = gameBoard.getTileAt(new Point(row, col));
+                if (tile != null) {
+                    int index = (row - 1) * 7 + (col - 1); // Map to gridPanel index
+                    Component component = gridPanel.getComponent(index);
+    
+                    if (component instanceof JLayeredPane) {
+                        JLayeredPane cellPane = (JLayeredPane) component;
+                        Component[] layers = cellPane.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER);
+                        if (layers.length > 0 && layers[0] instanceof JLabel) {
+                            JLabel imageLabel = (JLabel) layers[0];
+                            imageLabel.setIcon(new ImageIcon(tile.getImage()));
+                        }
+                    }
+                }
+            }
+        }
+    
+        gridPanel.revalidate();
+        gridPanel.repaint();
+    }
+
+    public JLabel getInsertPanelTileLabel() {
+        return (JLabel) insertPanel.getComponent(0);
+    }
+    
+    public JPanel getGridPanel() {
+        return gridPanel;
+    }
+    
+    
+    
+    
+    
 
    
 
@@ -172,170 +254,114 @@ public class MainGame {
 
     
     private JPanel createGridPanel() {
-        JPanel gridPanel = new JPanel(new GridBagLayout());
-        gridPanel.setOpaque(false);
-        gridPanel.setBounds(50, 50, 650, 650); // Adjust size for 9x9 grid
-    
-        GridBagConstraints gbc = new GridBagConstraints();
-        Dimension cellSize = new Dimension(60, 60); // Each cell's size
-    
-        List<String> imageList = generateImageList();
-        Collections.shuffle(imageList);
-    
-        int imageIndex = 0;
-    
-        for (int row = 0; row < 9; row++) {
-            for (int col = 0; col < 9; col++) {
-                gbc.gridx = col;
-                gbc.gridy = row;
-    
-                if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
-                    // Add side cells: left (col 0) and right (col 8)
-                    String imagePath = col == 0 ? "Pictures/GridCell/insert_right.png" : "Pictures/GridCell/insert_left.png";
-                    System.out.println("Adding side cell at row: " + row + ", col: " + col + ", path: " + imagePath);
-                    JPanel sideCell = createCellPanel(imagePath, cellSize);
-                    gridPanel.add(sideCell, gbc);
-                } else if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
-                    // Add side cells: top (row 0) and bottom (row 8)
-                    String imagePath = row == 0 ? "Pictures/GridCell/insert_down.png" : "Pictures/GridCell/insert_up.png";
-                    System.out.println("Adding side cell at row: " + row + ", col: " + col + ", path: " + imagePath);
-                    JPanel sideCell = createCellPanel(imagePath, cellSize);
-                    gridPanel.add(sideCell, gbc);
-                } else if (row >= 1 && row <= 7 && col >= 1 && col <= 7) {
-                    // Add internal grid cells (7x7 grid)
-                    System.out.println("Adding grid cell at row: " + row + ", col: " + col);
-                    JPanel internalCell = createCellPanel(imageList.get(imageIndex), cellSize);
+    JPanel gridPanel = new JPanel(new GridBagLayout());
+    gridPanel.setOpaque(false);
+    gridPanel.setBounds(50, 50, 650, 650); // Adjust size for 9x9 grid
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    Dimension cellSize = new Dimension(60, 60); // Each cell's size
+
+    List<String> imageList = GameUtils.generateImageList(); // Generate the list of image paths
+    Collections.shuffle(imageList); // Shuffle the image list for randomness
+
+    int imageIndex = 0;
+
+    for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+            gbc.gridx = col;
+            gbc.gridy = row;
+
+            // Side cells: left and right edges
+            if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
+                String imagePath = (col == 0)
+                        ? "Pictures/GridCell/insert_right.png"
+                        : "Pictures/GridCell/insert_left.png";
+                JLayeredPane sideCell = createInteractiveInsertLayeredPane(imagePath, row, col, cellSize);
+                gridPanel.add(sideCell, gbc);
+            }
+            // Side cells: top and bottom edges
+            else if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
+                String imagePath = (row == 0)
+                        ? "Pictures/GridCell/insert_down.png"
+                        : "Pictures/GridCell/insert_up.png";
+                JLayeredPane sideCell = createInteractiveInsertLayeredPane(imagePath, row, col, cellSize);
+                gridPanel.add(sideCell, gbc);
+            }
+            // Internal 7x7 grid cells
+            else if (row >= 1 && row <= 7 && col >= 1 && col <= 7) {
+                if (imageIndex < imageList.size()) {
+                    JLayeredPane internalCell = createLayeredPane(imageList.get(imageIndex), cellSize);
                     gridPanel.add(internalCell, gbc);
                     imageIndex++;
                 } else {
-                    // Add empty corners (transparent cells)
-                    System.out.println("Adding empty corner at row: " + row + ", col: " + col);
-                    JPanel emptyCell = new JPanel();
-                    emptyCell.setPreferredSize(cellSize);
-                    emptyCell.setOpaque(false); // Make the cell completely transparent
+                    System.err.println("Ran out of images! Adding a placeholder.");
+                    JLayeredPane emptyCell = createLayeredPane(null, cellSize);
                     gridPanel.add(emptyCell, gbc);
                 }
             }
+            // Empty corner cells
+            else {
+                JLayeredPane emptyCell = createLayeredPane(null, cellSize);
+                gridPanel.add(emptyCell, gbc);
+            }
         }
-    
-        return gridPanel;
-    }
-    
-
-/**
- * Creates a single grid cell with an image specified by a path.
- * 
- * This method initializes a JPanel that represents a cell in the grid. 
- * The cell displays an image from the provided image path, scaled to fit 
- * the specified cell size. The cell is transparent to show the background.
- * 
- * @param imagePath the path to the image to be displayed in the cell.
- * @param cellSize the preferred size of the cell.
- * @return the newly created JPanel representing a grid cell containing the image.
- */
-/**
- * Creates a single grid cell with an image.
- * 
- * This method initializes a JPanel that represents a cell in the grid.
- * The cell displays an image from the provided image path, scaled to fit
- * the specified cell size. If the image fails to load, a default empty cell is created.
- * 
- * @param imagePath The path to the image to be displayed in the cell.
- * @param cellSize The preferred size of the cell.
- * @return The newly created JPanel representing a grid cell.
- */
-private JPanel createCellPanel(String imagePath, Dimension cellSize) {
-    JPanel cell = new JPanel(new BorderLayout());
-    cell.setPreferredSize(cellSize);
-    cell.setOpaque(false); // Make the cell transparent
-
-    try {
-        // Load and scale the image
-        ImageIcon originalIcon = new ImageIcon(imagePath);
-        Image scaledImage = originalIcon.getImage().getScaledInstance(cellSize.width, cellSize.height, Image.SCALE_SMOOTH);
-        ImageIcon scaledIcon = new ImageIcon(scaledImage);
-
-        // Add the image to a JLabel and center it
-        JLabel imageLabel = new JLabel(scaledIcon);
-        cell.add(imageLabel, BorderLayout.CENTER);
-    } catch (Exception e) {
-        System.err.println("Failed to load image: " + imagePath);
-        // Fallback to an empty cell with a placeholder background color
-        cell.setBackground(Color.RED); // Placeholder for debugging
-        cell.setOpaque(true); // Make the cell visible for debugging
     }
 
-    return cell;
+    return gridPanel;
+}
+
+// Create a layered pane for all cells
+private JLayeredPane createLayeredPane(String imagePath, Dimension cellSize) {
+    JLayeredPane pane = new JLayeredPane();
+    pane.setPreferredSize(cellSize);
+
+    JLabel imageLabel = new JLabel();
+    imageLabel.setBounds(0, 0, cellSize.width, cellSize.height);
+
+    if (imagePath != null) {
+        ImageIcon icon = new ImageIcon(new ImageIcon(imagePath)
+                .getImage().getScaledInstance(cellSize.width, cellSize.height, Image.SCALE_SMOOTH));
+        imageLabel.setIcon(icon);
+    }
+
+    pane.add(imageLabel, JLayeredPane.DEFAULT_LAYER); // Add image to default layer
+    return pane;
+}
+
+// Create an interactive layered pane for insertion cells
+private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int row, int col, Dimension cellSize) {
+    JLayeredPane pane = createLayeredPane(imagePath, cellSize);
+
+    // Add metadata for interaction
+    pane.putClientProperty("row", row);
+    pane.putClientProperty("col", col);
+
+    // Add MouseListener to handle clicks
+    pane.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            int clickedRow = (int) pane.getClientProperty("row");
+            int clickedCol = (int) pane.getClientProperty("col");
+
+            if (gameController != null) {
+                gameController.handleInsertClick(clickedRow, clickedCol);
+            } else {
+                System.err.println("GameController is not initialized!");
+            }
+        }
+    });
+
+    return pane;
 }
 
 
 
 
-    /**
-     * Generates a list of image paths with specified frequencies for the game grid.
-     * 
-     * This method constructs a list containing the paths to various images, each added according 
-     * to a specific frequency. The images represent different components of the labyrinth layout 
-     * and are utilized to populate the grid cells. The method ensures that the images are added 
-     * in the correct quantities to match the intended design of the game.
-     * 
-     * @return a List of String containing image paths according to their specified frequencies.
-     */
-    private List<String> generateImageList() {
-        String[] imagePaths = {
-            "Pictures/GridCell/brick_cross.png",  // Cross - 2 times 
-            "Pictures/GridCell/brick_cross.png",  // Vertical - 8 times
-            "Pictures/GridCell/hallway_horiz.png",  // Horizontal - 7 times
-            "Pictures/GridCell/brick_NE.png",  // northeast - 4 times
-            "Pictures/GridCell/brick_NW.png",  // northwest - 4 times
-            "Pictures/GridCell/brick_SE.png",  // southeast - 4 times
-            "Pictures/GridCell/brick_SW.png",  // southwest - 4 times
-            "Pictures/GridCell/brick_Teast.png", // T-east - 4 times
-            "Pictures/GridCell/brick_Twest.png", // T-west - 4 times
-            "Pictures/GridCell/brick_Tnorth.png", // T-north - 4 times
-            "Pictures/GridCell/brick_Tsouth.png", // T-south - 4 times
-        };
 
-        // Create a list to store images according to their usage frequency
-        List<String> imageList = new ArrayList<String>();
 
-        // Add images to the list with specified frequencies
-        for (int i = 0; i < 2; i++) {
-            imageList.add(imagePaths[0]);  // Cross
-        }
-        for (int i = 0; i < 8; i++) {
-            imageList.add(imagePaths[1]);  // Vertical
-        }
-        for (int i = 0; i < 7; i++) {
-            imageList.add(imagePaths[2]);  //Horizontal
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[3]);  //northeast
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[4]);  //northwest
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[5]);  //southeast
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[6]);  //southwest
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[7]);  //T-east
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[8]);  //T-west
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[9]);  //T-north
-        }
-        for (int i = 0; i < 4; i++) {
-            imageList.add(imagePaths[10]);  //T-south
-        }
 
-        return imageList;
-    }
+
+    
 
 
     /**
@@ -558,72 +584,69 @@ private JPanel createCellPanel(String imagePath, Dimension cellSize) {
  * @return a JPanel configured for inserting a piece, containing a label,
  *         an image, and the buttons.
  */
-private JPanel createInsertPanel(Tile insertTile) {
-    JPanel insertPanel = new JPanel(); // Panel for the cell image and button
-    insertPanel.setLayout(new BoxLayout(insertPanel, BoxLayout.Y_AXIS)); // Use vertical box layout
-    insertPanel.setOpaque(false); // Make the panel transparent 
+private JPanel createInsertPanel(String initialImagePath) {
+    if (initialImagePath == null || initialImagePath.isEmpty()) {
+        initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Default placeholder image path
+    }
 
-    // Select position label
-    JLabel selectPositionLabel = new JLabel("Select Position");
-    selectPositionLabel.setForeground(Color.WHITE); // Set text color
-    selectPositionLabel.setFont(new Font("Arial", Font.PLAIN, 20)); // Set label text size
-    selectPositionLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the label
-    insertPanel.add(selectPositionLabel);
+    // Create the Tile object for the InsertPanel
+    Tile currentInsertTile = new Tile("default", initialImagePath);
 
-    // Add spacing between label and image
-    insertPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Vertical spacing of 5 pixels
+    // Create the InsertPanel as a JPanel
+    JPanel insertPanel = new JPanel();
+    insertPanel.setLayout(new BorderLayout()); // Use BorderLayout for easier placement
+    insertPanel.setPreferredSize(new Dimension(80, 120)); // Adjust size for image and button
+    insertPanel.setOpaque(false); // Transparent background
 
-    // Create and load the image for the cell
-    JLabel cellImageLabel = new JLabel(new ImageIcon(insertTile.getImage())); // Load tile's initial image
-    cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set image size to 65x65
-    cellImageLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the image
-    cellImageLabel.setBorder(new LineBorder(Color.WHITE, 1));
+    // Create and load the image for the tile
+    JLabel cellImageLabel = new JLabel();
+    cellImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set size for the image
 
-    // Panel to hold "Insert" and "Rotate" buttons side by side
-    JPanel buttonPanel = new JPanel();
-    buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0)); // Centered with spacing
-    buttonPanel.setOpaque(false); // Transparent background for the button panel
-
-    // Create the Insert button
-    JButton insertButton = new JButton("Insert");
-    insertButton.setPreferredSize(new Dimension(100, 30)); // Set button size
-    insertButton.setFont(new Font("Arial", Font.BOLD, 16)); // Set button text size
-    insertButton.setForeground(Color.WHITE); // Set button text color
-    insertButton.setOpaque(false); // Make button transparent
-    insertButton.setContentAreaFilled(false); // Remove background fill
-    insertButton.setBorderPainted(false); // Remove border painting
-    insertButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    // Load and set the initial image dynamically
+    if (currentInsertTile.getImage() != null) {
+        ImageIcon scaledIcon = new ImageIcon(currentInsertTile.getImage().getScaledInstance(65, 65, Image.SCALE_SMOOTH));
+        cellImageLabel.setIcon(scaledIcon);
+    } else {
+        System.err.println("Error: InsertPanel tile image not loaded.");
+    }
+    insertPanel.add(cellImageLabel, BorderLayout.CENTER); // Add the image label to the center
 
     // Create the Rotate button
     JButton rotateButton = new JButton("Rotate");
-    rotateButton.setPreferredSize(new Dimension(80, 30)); // Smaller button size
-    rotateButton.setFont(new Font("Arial", Font.BOLD, 14)); // Set button text size
-    rotateButton.setForeground(Color.WHITE); // Set button text color
-    rotateButton.setOpaque(false); // Make button transparent
-    rotateButton.setContentAreaFilled(false); // Remove background fill
-    rotateButton.setBorderPainted(false); // Remove border painting
-    rotateButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+    rotateButton.setPreferredSize(new Dimension(80, 25)); // Adjust size of the button
+    rotateButton.setFont(new Font("Arial", Font.BOLD, 12));
+    rotateButton.setForeground(Color.WHITE);
+    rotateButton.setOpaque(false);
+    rotateButton.setContentAreaFilled(false);
+    rotateButton.setBorderPainted(true);
 
-    // Add action listener to Rotate button
+    // Add action listener to rotate the tile
     rotateButton.addActionListener(e -> {
         // Rotate the tile
-        insertTile.rotateClockwise();
+        currentInsertTile.rotateClockwise();
 
         // Update the image label to reflect the new rotation
-        cellImageLabel.setIcon(new ImageIcon(insertTile.getImage()));
+        if (currentInsertTile.getImage() != null) {
+            ImageIcon rotatedIcon = new ImageIcon(currentInsertTile.getImage().getScaledInstance(65, 65, Image.SCALE_SMOOTH));
+            cellImageLabel.setIcon(rotatedIcon);
+        } else {
+            System.err.println("Error: Rotated tile image is null.");
+        }
+
+        // Ensure focus remains on the main game window
+        SwingUtilities.getWindowAncestor(insertPanel).requestFocusInWindow();
     });
 
-    // Add both buttons to the button panel
-    buttonPanel.add(insertButton);
-    buttonPanel.add(rotateButton);
+    // Add the Rotate button to the bottom of the panel
+    insertPanel.add(rotateButton, BorderLayout.SOUTH);
 
-    // Add the image and button panel to the insert panel
-    insertPanel.add(cellImageLabel);
-    insertPanel.add(Box.createRigidArea(new Dimension(0, 4))); // Vertical spacing of 5 pixels
-    insertPanel.add(buttonPanel);
+    // Store the Tile object as a client property for easy access
+    insertPanel.putClientProperty("currentTile", currentInsertTile);
 
-    return insertPanel; // Return the complete insert panel
+    return insertPanel; // Return the complete InsertPanel
 }
+
 
 
 private static final Point[] PLAYER_START_POSITIONS = {
@@ -646,7 +669,7 @@ private JLayeredPane createGridWithPlayersAndTokens() {
     layeredGridPane.setBounds(50, 50, 650, 650);
 
     // Create the grid panel
-    JPanel gridPanel = createGridPanel();
+    gridPanel = createGridPanel();
     gridPanel.setBounds(0, 0, 650, 650); // Align grid panel within the layered pane
 
     // Add the grid panel to the bottom layer
@@ -828,6 +851,21 @@ public void showInvalidMoveDialog() {
         JOptionPane.WARNING_MESSAGE
     );
 }
+
+public Tile getInsertPanelTile() {
+    if (currentInsertTile == null) {
+        System.err.println("Error: currentInsertTile is null!");
+        return null;
+    }
+    return currentInsertTile;
+}
+
+public JPanel getInsertPanel() {
+    // TODO Auto-generated method stub
+    //throw new UnsupportedOperationException("Unimplemented method 'getInsertPanel'");
+    return insertPanel;
+}
+
 
 
 
