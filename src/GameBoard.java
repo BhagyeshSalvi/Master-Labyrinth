@@ -2,7 +2,9 @@ import java.awt.Component;
 import java.awt.Image;
 import java.awt.Point;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -23,6 +25,21 @@ public class GameBoard {
         initializeTiles(imageList);
         
     
+    }
+
+    public Tile getTile(int row, int col) {
+        if (row < 0 || row >= 9 || col < 0 || col >= 9) return null; // Bounds check
+        return tiles[row][col];
+    }
+    
+    private Map<Point, JLabel> tokenMap = new HashMap<>();
+
+    public Map<Point, JLabel> getTokenMap() {
+        return tokenMap;
+    }
+
+    public void addToken(Point position, JLabel tokenLabel) {
+        tokenMap.put(position, tokenLabel);
     }
 
     private void initializeTiles(List<String> imageList) {
@@ -53,7 +70,9 @@ public class GameBoard {
                 }
             }
         }
+        
     }
+    
     
 
     // Getters
@@ -128,139 +147,119 @@ public class GameBoard {
         return false; // Tile is not occupied
     }
 
-    public void shiftColumnDown(int col, JPanel gridPanel, JLabel insertPanelLabel) {
-        ImageIcon tempIcon = null; // To store the icon of the last playable cell (row 7)
+    private void updateCellIcon(JPanel gridPanel, int row, int col, Tile tile) {
+        int cellIndex = row * 9 + col; // Calculate the cell index in the grid
+        Component cellComponent = gridPanel.getComponent(cellIndex);
     
-        // Save the last playable cell's icon for the InsertPanel
-        int lastPlayableIndex = 7 * 9 + col; // Last playable cell index (row 7)
-        Component lastPlayableComponent = gridPanel.getComponent(lastPlayableIndex);
-        if (lastPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane lastPlayablePane = (JLayeredPane) lastPlayableComponent;
-            JLabel lastPlayableLabel = (JLabel) lastPlayablePane.getComponent(0);
-            tempIcon = (ImageIcon) lastPlayableLabel.getIcon(); // Save the icon
-            System.out.println("Last playable cell's icon: " + tempIcon); // Debugging log
-        }
-    
-        // Shift the 7 playable cells down (rows 7 to 1)
-        for (int row = 7; row > 0; row--) {
-            int currentIndex = row * 9 + col; // Current cell index
-            int aboveIndex = (row - 1) * 9 + col; // Cell above the current one
-            Component currentComponent = gridPanel.getComponent(currentIndex);
-            Component aboveComponent = gridPanel.getComponent(aboveIndex);
-    
-            if (currentComponent instanceof JLayeredPane && aboveComponent instanceof JLayeredPane) {
-                JLabel currentLabel = (JLabel) ((JLayeredPane) currentComponent).getComponent(0);
-                JLabel aboveLabel = (JLabel) ((JLayeredPane) aboveComponent).getComponent(0);
-    
-                currentLabel.setIcon(aboveLabel.getIcon()); // Shift the icon down
-                System.out.println("Shifted icon from row " + (row - 1) + " to row " + row); // Debugging log
-            }
-        }
-    
-        // Place the InsertPanel's tile into the second-row cell (row 1)
-        int secondRowIndex = 1 * 9 + col; // Second row index (row 1)
-        Component secondRowComponent = gridPanel.getComponent(secondRowIndex);
-        if (secondRowComponent instanceof JLayeredPane) {
-            JLayeredPane secondRowPane = (JLayeredPane) secondRowComponent;
-            JLabel secondRowLabel = (JLabel) secondRowPane.getComponent(0);
-    
-            if (insertPanelLabel.getIcon() != null) {
-                secondRowLabel.setIcon(insertPanelLabel.getIcon()); // Set the InsertPanel's tile icon
-                System.out.println("Second row updated with InsertPanel tile icon: " + insertPanelLabel.getIcon());
+        if (cellComponent instanceof JLayeredPane) {
+            JLayeredPane layeredPane = (JLayeredPane) cellComponent;
+            JLabel label = (JLabel) layeredPane.getComponent(0); // Assuming the JLabel is the first component
+            if (tile != null && tile.getImageIcon() != null) {
+                label.setIcon(tile.getImageIcon());
             } else {
-                System.err.println("Error: InsertPanel tile icon is null. Using placeholder image.");
-    
-                // Create a scaled placeholder image
-                ImageIcon placeholderIcon = new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                    .getImage()
-                    .getScaledInstance(60, 60, Image.SCALE_SMOOTH)); // Scale to 60x60
-    
-                secondRowLabel.setIcon(placeholderIcon); // Set the scaled placeholder image
+                label.setIcon(null); // Clear the icon if the Tile is null or has no image
             }
+        }
+    }
+    
+    
+    
+    
+    private void updateInsertPanelIcon(JPanel insertPanel, Tile tile) {
+        JLabel insertPanelLabel = (JLabel) insertPanel.getComponent(0); // Assuming the JLabel is the first component
+        if (tile != null && tile.getImagePath() != null) {
+            tile.reloadImage(); // Ensure the image is loaded
+            insertPanelLabel.setIcon(new ImageIcon(new ImageIcon(tile.getImagePath())
+                .getImage()
+                .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
         } else {
-            System.err.println("Second row cell (row 1) is not a valid JLayeredPane.");
+            insertPanelLabel.setIcon(null); // Clear the icon if the Tile is null or has no image
+        }
+    }
+    
+
+    public void shiftColumnDown(int col, JPanel gridPanel, JPanel insertPanel) {
+        // Retrieve the current Tile from the InsertPanel
+        Tile insertPanelTile = (Tile) insertPanel.getClientProperty("currentTile");
+    
+        if (insertPanelTile == null || insertPanelTile.getImagePath() == null) {
+            System.err.println("Error: InsertPanel Tile is null or has no valid imagePath.");
+            return;
         }
     
-        // Update the InsertPanel with the last playable cell's icon
-        if (tempIcon != null) {
-            insertPanelLabel.setIcon(tempIcon); // Update the InsertPanel with the last cell's icon
-            System.out.println("InsertPanel updated with last playable cell's icon: " + tempIcon);
-        } else {
-            System.err.println("Error: Last playable cell's icon is null.");
+        // Save the last playable Tile (row 7)
+        Tile lastTile = tiles[7][col];
+        if (lastTile == null || lastTile.getImagePath() == null) {
+            System.err.println("Error: Last Tile in the column is null or has no valid imagePath.");
+            return;
         }
+    
+        // Shift rows 7 to 1 downwards
+        for (int row = 7; row > 1; row--) {
+            tiles[row][col] = tiles[row - 1][col]; // Move Tile in the array
+    
+            // Update the UI for the current cell
+            updateCellIcon(gridPanel, row, col, tiles[row][col]);
+        }
+    
+        // Update the first playable Tile (row 1) with the rotated InsertPanel Tile
+        tiles[1][col] = insertPanelTile;
+    
+        // Update the UI for the first cell (row 1)
+        updateCellIcon(gridPanel, 1, col, tiles[1][col]);
+    
+        // Update the InsertPanel with the last playable Tile
+        insertPanel.putClientProperty("currentTile", lastTile);
+        updateInsertPanelIcon(insertPanel, lastTile);
     
         // Refresh the grid
         gridPanel.revalidate();
         gridPanel.repaint();
     }
     
+    
+    
+    
 
-
     
     
     
+    public void shiftColumnUp(int col, JPanel gridPanel, JPanel insertPanel) {
+        // Retrieve the current Tile from the InsertPanel
+        Tile insertPanelTile = (Tile) insertPanel.getClientProperty("currentTile");
     
-    public void shiftColumnUp(int col, JPanel gridPanel, JLabel insertPanelLabel) {
-        ImageIcon tempIcon = null; // To store the icon of the first playable cell (row 1)
-    
-        // Save the first playable cell's icon for the InsertPanel
-        int firstPlayableIndex = 1 * 9 + col; // First playable cell index (row 1)
-        Component firstPlayableComponent = gridPanel.getComponent(firstPlayableIndex);
-        if (firstPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane firstPlayablePane = (JLayeredPane) firstPlayableComponent;
-            JLabel firstPlayableLabel = (JLabel) firstPlayablePane.getComponent(0);
-            tempIcon = (ImageIcon) firstPlayableLabel.getIcon(); // Save the icon
+        if (insertPanelTile == null || insertPanelTile.getImagePath() == null) {
+            System.err.println("Error: InsertPanel Tile is null or has no valid imagePath.");
+            return;
         }
     
-        if (tempIcon == null) {
-            System.err.println("First playable cell's icon is null. Using placeholder image.");
-            tempIcon = new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                .getImage()
-                .getScaledInstance(60, 60, Image.SCALE_SMOOTH));
+        // Save the first playable Tile (row 1)
+        Tile firstTile = tiles[1][col];
+        if (firstTile == null || firstTile.getImagePath() == null) {
+            System.err.println("Error: First Tile in the column is null or has no valid imagePath.");
+            return;
         }
     
-        // Shift cells upwards (rows 1 to 7)
+        // Debugging: Log the InsertPanel Tile and the first Tile before shifting
+        System.out.println("InsertPanel Tile before shift: " + insertPanelTile.getImagePath());
+        System.out.println("First Tile before shift (to go into InsertPanel): " + firstTile.getImagePath());
+    
+        // Shift rows 1 to 7 upwards
         for (int row = 1; row < 7; row++) {
-            int currentIndex = row * 9 + col;
-            int belowIndex = (row + 1) * 9 + col;
-    
-            Component currentComponent = gridPanel.getComponent(currentIndex);
-            Component belowComponent = gridPanel.getComponent(belowIndex);
-    
-            if (currentComponent instanceof JLayeredPane && belowComponent instanceof JLayeredPane) {
-                JLabel currentLabel = (JLabel) ((JLayeredPane) currentComponent).getComponent(0);
-                JLabel belowLabel = (JLabel) ((JLayeredPane) belowComponent).getComponent(0);
-    
-                if (belowLabel.getIcon() == null) {
-                    System.err.println("Below cell's icon is null. Assigning placeholder image.");
-                    belowLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                        .getImage()
-                        .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-                }
-    
-                currentLabel.setIcon(belowLabel.getIcon()); // Shift the icon up
-            }
+            tiles[row][col] = tiles[row + 1][col]; // Move Tile in the array
+            updateCellIcon(gridPanel, row, col, tiles[row][col]); // Update UI
         }
     
-        // Place the InsertPanel's tile into the last playable cell (row 7)
-        int lastPlayableIndex = 7 * 9 + col; // Last playable cell index (row 7)
-        Component lastPlayableComponent = gridPanel.getComponent(lastPlayableIndex);
-        if (lastPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane lastPlayablePane = (JLayeredPane) lastPlayableComponent;
-            JLabel lastPlayableLabel = (JLabel) lastPlayablePane.getComponent(0);
+        // Update the last playable row (row 7) with the InsertPanel Tile
+        tiles[7][col] = insertPanelTile;
+        updateCellIcon(gridPanel, 7, col, tiles[7][col]);
     
-            if (insertPanelLabel.getIcon() != null) {
-                lastPlayableLabel.setIcon(insertPanelLabel.getIcon());
-            } else {
-                System.err.println("InsertPanel tile icon is null. Using placeholder image.");
-                lastPlayableLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                    .getImage()
-                    .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-            }
-        }
+        // Update the InsertPanel with the first playable Tile (row 1)
+        insertPanel.putClientProperty("currentTile", firstTile);
+        updateInsertPanelIcon(insertPanel, firstTile);
     
-        // Update the InsertPanel with the first playable cell's icon
-        insertPanelLabel.setIcon(tempIcon);
+        // Debugging: Log the updated InsertPanel Tile
+        System.out.println("InsertPanel Tile after shift: " + firstTile.getImagePath());
     
         // Refresh the grid
         gridPanel.revalidate();
@@ -269,69 +268,42 @@ public class GameBoard {
     
     
     
-    
-    public void shiftRowRight(int row, JPanel gridPanel, JLabel insertPanelLabel) {
-        ImageIcon tempIcon = null; // To store the icon of the last playable cell (column 7)
-    
-        // Save the last playable cell's icon for the InsertPanel
-        int lastPlayableIndex = row * 9 + 7; // Last playable cell index (column 7)
-        Component lastPlayableComponent = gridPanel.getComponent(lastPlayableIndex);
-        if (lastPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane lastPlayablePane = (JLayeredPane) lastPlayableComponent;
-            JLabel lastPlayableLabel = (JLabel) lastPlayablePane.getComponent(0);
-            tempIcon = (ImageIcon) lastPlayableLabel.getIcon(); // Save the icon
-            System.out.println("Last playable cell's icon: " + tempIcon); // Debugging log
+    public void shiftRowRight(int row, JPanel gridPanel, JPanel insertPanel) {
+        // Retrieve the current Tile from the InsertPanel
+        Tile insertPanelTile = (Tile) insertPanel.getClientProperty("currentTile");
+       
+        if (insertPanelTile == null || insertPanelTile.getImagePath() == null) {
+            System.err.println("Error: InsertPanel Tile is null or has no valid imagePath.");
+            return;
         }
     
-        if (tempIcon == null) {
-            System.err.println("Last playable cell's icon is null. Using placeholder image.");
-            tempIcon = new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                .getImage()
-                .getScaledInstance(60, 60, Image.SCALE_SMOOTH));
+        // Save the last playable Tile (column 7)
+        Tile lastTile = tiles[row][7];
+        if (lastTile == null || lastTile.getImagePath() == null) {
+            System.err.println("Error: Last Tile in the row is null or has no valid imagePath.");
+            return;
         }
     
-        // Shift cells in the row to the right (columns 7 to 1)
-        for (int col = 7; col > 0; col--) {
-            int currentIndex = row * 9 + col;
-            int leftIndex = row * 9 + (col - 1);
+        // Debugging: Log the InsertPanel Tile and the last Tile before shifting
+        System.out.println("InsertPanel Tile before shift: " + insertPanelTile.getImagePath());
+        System.out.println("Last Tile before shift (to go into InsertPanel): " + lastTile.getImagePath());
     
-            Component currentComponent = gridPanel.getComponent(currentIndex);
-            Component leftComponent = gridPanel.getComponent(leftIndex);
-    
-            if (currentComponent instanceof JLayeredPane && leftComponent instanceof JLayeredPane) {
-                JLabel currentLabel = (JLabel) ((JLayeredPane) currentComponent).getComponent(0);
-                JLabel leftLabel = (JLabel) ((JLayeredPane) leftComponent).getComponent(0);
-    
-                if (leftLabel.getIcon() == null) {
-                    System.err.println("Left cell's icon is null. Assigning placeholder image.");
-                    leftLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                        .getImage()
-                        .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-                }
-    
-                currentLabel.setIcon(leftLabel.getIcon()); // Shift the icon to the right
-            }
+        // Shift columns 7 to 1 to the right
+        for (int col = 7; col > 1; col--) {
+            tiles[row][col] = tiles[row][col - 1]; // Move Tile in the array
+            updateCellIcon(gridPanel, row, col, tiles[row][col]); // Update UI
         }
     
-        // Place the InsertPanel's tile into the first playable cell (column 1)
-        int firstPlayableIndex = row * 9 + 1; // First playable cell index (column 1)
-        Component firstPlayableComponent = gridPanel.getComponent(firstPlayableIndex);
-        if (firstPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane firstPlayablePane = (JLayeredPane) firstPlayableComponent;
-            JLabel firstPlayableLabel = (JLabel) firstPlayablePane.getComponent(0);
+        // Update the first playable column (column 1) with the InsertPanel Tile
+        tiles[row][1] = insertPanelTile;
+        updateCellIcon(gridPanel, row, 1, tiles[row][1]);
     
-            if (insertPanelLabel.getIcon() != null) {
-                firstPlayableLabel.setIcon(insertPanelLabel.getIcon()); // Set the InsertPanel's tile icon
-            } else {
-                System.err.println("InsertPanel tile icon is null. Using placeholder image.");
-                firstPlayableLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                    .getImage()
-                    .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-            }
-        }
+        // Update the InsertPanel with the last playable Tile (column 7)
+        insertPanel.putClientProperty("currentTile", lastTile);
+        updateInsertPanelIcon(insertPanel, lastTile);
     
-        // Update the InsertPanel with the last playable cell's icon
-        insertPanelLabel.setIcon(tempIcon);
+        // Debugging: Log the updated InsertPanel Tile
+        System.out.println("InsertPanel Tile after shift: " + lastTile.getImagePath());
     
         // Refresh the grid
         gridPanel.revalidate();
@@ -339,79 +311,48 @@ public class GameBoard {
     }
     
     
-    public void shiftRowLeft(int row, JPanel gridPanel, JLabel insertPanelLabel) {
-        ImageIcon tempIcon = null; // To store the icon of the first playable cell (column 1)
     
-        // Save the first playable cell's icon for the InsertPanel
-        int firstPlayableIndex = row * 9 + 1; // First playable cell index (column 1)
-        Component firstPlayableComponent = gridPanel.getComponent(firstPlayableIndex);
-        if (firstPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane firstPlayablePane = (JLayeredPane) firstPlayableComponent;
-            JLabel firstPlayableLabel = (JLabel) firstPlayablePane.getComponent(0);
-            tempIcon = (ImageIcon) firstPlayableLabel.getIcon(); // Save the icon
-            System.out.println("First playable cell's icon: " + tempIcon); // Debugging log
+    public void shiftRowLeft(int row, JPanel gridPanel, JPanel insertPanel) {
+        // Retrieve the current Tile from the InsertPanel
+        Tile insertPanelTile = (Tile) insertPanel.getClientProperty("currentTile");
+    
+        if (insertPanelTile == null || insertPanelTile.getImagePath() == null) {
+            System.err.println("Error: InsertPanel Tile is null or has no valid imagePath.");
+            return;
         }
     
-        if (tempIcon == null) {
-            System.err.println("First playable cell's icon is null. Using placeholder image.");
-            tempIcon = new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                .getImage()
-                .getScaledInstance(60, 60, Image.SCALE_SMOOTH));
+        // Save the first playable Tile (column 1)
+        Tile firstTile = tiles[row][1];
+        if (firstTile == null || firstTile.getImagePath() == null) {
+            System.err.println("Error: First Tile in the row is null or has no valid imagePath.");
+            return;
         }
     
-        // Shift cells in the row to the left (columns 1 to 7)
-        for (int col = 1; col < 8; col++) {
-            int currentIndex = row * 9 + col;
-            int rightIndex = row * 9 + (col + 1);
+        // Debugging: Log the InsertPanel Tile and the first Tile before shifting
+        System.out.println("InsertPanel Tile before shift: " + insertPanelTile.getImagePath());
+        System.out.println("First Tile before shift (to go into InsertPanel): " + firstTile.getImagePath());
     
-            Component currentComponent = gridPanel.getComponent(currentIndex);
-            Component rightComponent = gridPanel.getComponent(rightIndex);
-    
-            if (currentComponent instanceof JLayeredPane && rightComponent instanceof JLayeredPane) {
-                JLabel currentLabel = (JLabel) ((JLayeredPane) currentComponent).getComponent(0);
-                JLabel rightLabel = (JLabel) ((JLayeredPane) rightComponent).getComponent(0);
-    
-                if (rightLabel.getIcon() == null) {
-                    System.err.println("Right cell's icon is null. Assigning placeholder image.");
-                    rightLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                        .getImage()
-                        .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-                }
-    
-                currentLabel.setIcon(rightLabel.getIcon()); // Shift the icon to the left
-            }
+        // Shift columns 1 to 7 to the left
+        for (int col = 1; col < 7; col++) {
+            tiles[row][col] = tiles[row][col + 1]; // Move Tile in the array
+            updateCellIcon(gridPanel, row, col, tiles[row][col]); // Update UI
         }
     
-        // Place the InsertPanel's tile into the last playable cell (column 7)
-        int lastPlayableIndex = row * 9 + 7; // Last playable cell index (column 7)
-        Component lastPlayableComponent = gridPanel.getComponent(lastPlayableIndex);
-        if (lastPlayableComponent instanceof JLayeredPane) {
-            JLayeredPane lastPlayablePane = (JLayeredPane) lastPlayableComponent;
-            JLabel lastPlayableLabel = (JLabel) lastPlayablePane.getComponent(0);
+        // Update the last playable column (column 7) with the InsertPanel Tile
+        tiles[row][7] = insertPanelTile;
+        updateCellIcon(gridPanel, row, 7, tiles[row][7]);
     
-            if (insertPanelLabel.getIcon() != null) {
-                lastPlayableLabel.setIcon(insertPanelLabel.getIcon()); // Set the InsertPanel's tile icon
-            } else {
-                System.err.println("InsertPanel tile icon is null. Using placeholder image.");
-                lastPlayableLabel.setIcon(new ImageIcon(new ImageIcon("Pictures/GridCell/hallway_horiz.png")
-                    .getImage()
-                    .getScaledInstance(60, 60, Image.SCALE_SMOOTH)));
-            }
-        }
+        // Update the InsertPanel with the first playable Tile (column 1)
+        insertPanel.putClientProperty("currentTile", firstTile);
+        updateInsertPanelIcon(insertPanel, firstTile);
     
-        // Update the InsertPanel with the first playable cell's icon
-        insertPanelLabel.setIcon(tempIcon);
+        // Debugging: Log the updated InsertPanel Tile
+        System.out.println("InsertPanel Tile after shift: " + firstTile.getImagePath());
     
         // Refresh the grid
         gridPanel.revalidate();
         gridPanel.repaint();
     }
-    
-    
-
-    
-    
-    
     
     
     

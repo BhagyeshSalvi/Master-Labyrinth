@@ -6,7 +6,7 @@ public class GameUtils {
     public static List<String> generateImageList() {
         String[] imagePaths = {
             "Pictures/GridCell/brick_cross.png",
-            "Pictures/GridCell/brick_cross.png",
+            "Pictures/GridCell/hallway_vert.png",
             "Pictures/GridCell/hallway_horiz.png",
             "Pictures/GridCell/brick_NE.png",
             "Pictures/GridCell/brick_NW.png",

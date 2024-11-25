@@ -12,6 +12,14 @@ public class Player {
         this.position = position;
         this.color = color;
     }
+    public void collectStar() {
+        starsCollected++; // Increment the star count
+        System.out.println("Star collected! Total stars: " + starsCollected);
+    }
+
+    public int getStarsCollected() {
+        return starsCollected; // Getter for stars
+    }
 
     public Point getPosition() {
         return position;

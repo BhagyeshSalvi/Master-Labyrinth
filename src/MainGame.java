@@ -12,7 +12,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.awt.event.*;
 
 /**
@@ -27,9 +29,13 @@ public class MainGame {
     private GameController gameController;
     private JPanel insertPanel; 
     private JLayeredPane layeredPane; 
-    private JPanel gridPanel;        
+    private JPanel gridPanel;    
+    private Map<Point, JLabel> tokenMap = new HashMap<>(); // To track tokens by their grid position
+    private JLabel[] playerStarLabels;
+
     
-    Tile currentInsertTile = new Tile(null, new ImageIcon("Pictures/GridCell/hallway_horiz.png").getImage());
+    
+    // Tile currentInsertTile = new Tile("default", new ImageIcon("Pictures/GridCell/hallway_vert.png").getImage());
 
     public MainGame(){
         Player[] players = {
@@ -168,11 +174,15 @@ public class MainGame {
             System.err.println("Error: InsertPanel tile is null.");
             return;
         }
-        currentInsertTile = newTile; // Update logic
-        JLabel cellImageLabel = (JLabel) insertPanel.getComponent(0); // Access label
-        cellImageLabel.setIcon(new ImageIcon(newTile.getImage())); // Update image
-        cellImageLabel.repaint(); // Force repaint
+        // Update the currentInsertTile reference
+        insertPanel.putClientProperty("currentTile", newTile);
+    
+        // Update the JLabel with the new tile's image
+        JLabel cellImageLabel = (JLabel) insertPanel.getComponent(0);
+        cellImageLabel.setIcon(new ImageIcon(newTile.getImage()));
+        cellImageLabel.repaint();
     }
+    
     
     
     
@@ -195,11 +205,13 @@ public class MainGame {
                 }
             }
         }
+        
     
         gridPanel.revalidate();
         gridPanel.repaint();
     }
-
+    
+    
     public JLabel getInsertPanelTileLabel() {
         return (JLabel) insertPanel.getComponent(0);
     }
@@ -252,63 +264,54 @@ public class MainGame {
         return backgroundPanel;
     }
 
+    private boolean isInteractivePosition(int row, int col) {
+        // Check side cells: left and right edges
+        if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
+            return true;
+        }
+    
+        // Check side cells: top and bottom edges
+        if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
+            return true;
+        }
+    
+        return false; // Not an interactive position
+    }
+    
     
     private JPanel createGridPanel() {
-    JPanel gridPanel = new JPanel(new GridBagLayout());
-    gridPanel.setOpaque(false);
-    gridPanel.setBounds(50, 50, 650, 650); // Adjust size for 9x9 grid
-
-    GridBagConstraints gbc = new GridBagConstraints();
-    Dimension cellSize = new Dimension(60, 60); // Each cell's size
-
-    List<String> imageList = GameUtils.generateImageList(); // Generate the list of image paths
-    Collections.shuffle(imageList); // Shuffle the image list for randomness
-
-    int imageIndex = 0;
-
-    for (int row = 0; row < 9; row++) {
-        for (int col = 0; col < 9; col++) {
-            gbc.gridx = col;
-            gbc.gridy = row;
-
-            // Side cells: left and right edges
-            if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
-                String imagePath = (col == 0)
-                        ? "Pictures/GridCell/insert_right.png"
-                        : "Pictures/GridCell/insert_left.png";
-                JLayeredPane sideCell = createInteractiveInsertLayeredPane(imagePath, row, col, cellSize);
-                gridPanel.add(sideCell, gbc);
-            }
-            // Side cells: top and bottom edges
-            else if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
-                String imagePath = (row == 0)
-                        ? "Pictures/GridCell/insert_down.png"
-                        : "Pictures/GridCell/insert_up.png";
-                JLayeredPane sideCell = createInteractiveInsertLayeredPane(imagePath, row, col, cellSize);
-                gridPanel.add(sideCell, gbc);
-            }
-            // Internal 7x7 grid cells
-            else if (row >= 1 && row <= 7 && col >= 1 && col <= 7) {
-                if (imageIndex < imageList.size()) {
-                    JLayeredPane internalCell = createLayeredPane(imageList.get(imageIndex), cellSize);
-                    gridPanel.add(internalCell, gbc);
-                    imageIndex++;
+        JPanel gridPanel = new JPanel(new GridBagLayout());
+        gridPanel.setOpaque(false);
+        gridPanel.setBounds(50, 50, 650, 650); // Adjust size for 9x9 grid
+    
+        GridBagConstraints gbc = new GridBagConstraints();
+        Dimension cellSize = new Dimension(60, 60); // Each cell's size
+    
+        for (int row = 0; row < 9; row++) {
+            for (int col = 0; col < 9; col++) {
+                gbc.gridx = col;
+                gbc.gridy = row;
+    
+                Tile tile = gameBoard.getTile(row, col); // Fetch the Tile object from GameBoard
+    
+                if (tile != null) {
+                    // Check if the tile is at an interactive position
+                    boolean isInteractive = isInteractivePosition(row, col);
+                    JLayeredPane cellPane = isInteractive
+                            ? createInteractiveInsertLayeredPane(tile.getImagePath(), row, col, cellSize)
+                            : createLayeredPane(tile.getImagePath(), cellSize);
+                    gridPanel.add(cellPane, gbc);
                 } else {
-                    System.err.println("Ran out of images! Adding a placeholder.");
+                    // Empty corner cells
                     JLayeredPane emptyCell = createLayeredPane(null, cellSize);
                     gridPanel.add(emptyCell, gbc);
                 }
             }
-            // Empty corner cells
-            else {
-                JLayeredPane emptyCell = createLayeredPane(null, cellSize);
-                gridPanel.add(emptyCell, gbc);
-            }
         }
+    
+        return gridPanel;
     }
-
-    return gridPanel;
-}
+    
 
 // Create a layered pane for all cells
 private JLayeredPane createLayeredPane(String imagePath, Dimension cellSize) {
@@ -540,37 +543,103 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         JPanel gameAreaPanel = new JPanel();
         gameAreaPanel.setLayout(new GridLayout(4, 1)); // Vertical layout for 4 players
         gameAreaPanel.setOpaque(false); // Make the background transparent if desired
-
+    
         // Player names and star counts
         String[] playerNames = {"Player 1", "Player 2", "Player 3", "Player 4"};
-        int[] starCounts = {3, 5, 2, 4}; // star counts for each player for only gui
-
+        int[] starCounts = {0, 5, 2, 4}; // Initial star counts for each player
+        playerStarLabels = new JLabel[playerNames.length]; // Array to store star labels
+    
         for (int i = 0; i < playerNames.length; i++) {
             JPanel playerPanel = new JPanel(); // Panel for each player
             playerPanel.setOpaque(false); // Make each player's panel transparent
             playerPanel.setLayout(new FlowLayout(FlowLayout.LEFT)); // Aligns content to the left
-
+    
             JLabel nameLabel = new JLabel(playerNames[i]);
             nameLabel.setForeground(Color.WHITE); // Set text color to white
             nameLabel.setFont(new Font("Arial", Font.PLAIN, 24)); // Increase text size
-
+    
             // Create star labels
-            StringBuilder stars = new StringBuilder();
-            for (int j = 0; j < starCounts[i]; j++) {
-                stars.append("★ "); // Append stars
-            }
-            JLabel starLabel = new JLabel(stars.toString());
-            starLabel.setForeground(Color.lightGray); // Set star color to yellow
-            // starLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Increase star text size
-
+            JLabel starLabel = new JLabel(); // Initialize empty star label
+            starLabel.setForeground(Color.LIGHT_GRAY); // Set star color to light gray
+            starLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Set font size
+            updateStars(starLabel, starCounts[i]); // Set initial stars
+    
+            playerStarLabels[i] = starLabel; // Store reference to the star label
+    
             playerPanel.add(nameLabel); // Add player name to panel
             playerPanel.add(starLabel); // Add stars to panel
-
+    
             gameAreaPanel.add(playerPanel); // Add player panel to game area panel
         }
-
+    
         return gameAreaPanel; // Return the complete game area panel
     }
+    
+    private void updateStars(JLabel starLabel, int count) {
+        StringBuilder stars = new StringBuilder();
+        for (int j = 0; j < count; j++) {
+            stars.append("* "); // Append stars
+        }
+        starLabel.setText(stars.toString()); // Update the label with stars
+    }
+    public void updatePlayerStars(int playerIndex, int newStarCount) {
+        if (playerIndex < 0 || playerIndex >= playerStarLabels.length) {
+            System.err.println("Invalid player index: " + playerIndex);
+            return;
+        }
+    
+        JLabel starLabel = playerStarLabels[playerIndex]; // Get the star label for the player
+        StringBuilder stars = new StringBuilder();
+        for (int i = 0; i < newStarCount; i++) {
+            stars.append("* "); // Add stars dynamically
+        }
+        starLabel.setText(stars.toString()); // Update the label
+        System.out.println("Updated Player " + (playerIndex + 1) + " stars to " + newStarCount);
+    }
+    public void collectTokenIfPresent(int playerIndex, Point position) {
+        // Step 1: Check if token exists at the given position
+        JLabel tokenLabel = tokenMap.get(position);
+        if (tokenLabel == null) {
+            System.err.println("No token found at position: " + position);
+            return;
+        }
+    
+        // Step 2: Remove token from layeredGridPane
+        if (layeredPane.isAncestorOf(tokenLabel)) {
+            layeredPane.remove(tokenLabel); // Remove token
+            System.out.println("Token removed from layeredGridPane.");
+        } else {
+            System.err.println("Token label is not part of layeredGridPane.");
+        }
+    
+        // Step 3: Verify token parent
+        System.out.println("Parent of tokenLabel after removal: " + tokenLabel.getParent());
+    
+        // Step 4: Update tokenMap
+        tokenMap.remove(position);
+        System.out.println("Token removed from tokenMap: " + position);
+    
+        // Step 5: Update player's star count
+        Player currentPlayer = gameBoard.getPlayers()[playerIndex];
+        currentPlayer.collectStar();
+        int newStarCount = currentPlayer.getStarsCollected();
+        updatePlayerStars(playerIndex, newStarCount);
+    
+        // Debugging: Log player's updated star count
+        System.out.println("Player " + (playerIndex + 1) + " collected a token and now has " + newStarCount + " stars.");
+    
+        // Step 6: Force a UI refresh
+        layeredPane.revalidate();
+        layeredPane.repaint();
+    
+        // Debugging: Verify the token is no longer in the layeredGridPane
+        System.out.println("Components in layeredGridPane after removal:");
+        for (Component component : layeredPane.getComponents()) {
+            System.out.println(component);
+        }
+    }
+    
+    
 
 
     /**
@@ -586,66 +655,66 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
  */
 private JPanel createInsertPanel(String initialImagePath) {
     if (initialImagePath == null || initialImagePath.isEmpty()) {
-        initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Default placeholder image path
+        initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Default placeholder
     }
 
-    // Create the Tile object for the InsertPanel
+    System.out.println("Initializing InsertPanel Tile with imagePath: " + initialImagePath);
+    // Create the Tile object
     Tile currentInsertTile = new Tile("default", initialImagePath);
+    if (currentInsertTile.getImagePath() == null || currentInsertTile.getImage() == null) {
+        System.err.println("Error: InsertPanel Tile initialized with invalid image.");
+    }
+    // Create the InsertPanel
+    JPanel insertPanel = new JPanel(new BorderLayout());
+    insertPanel.setPreferredSize(new Dimension(80, 120)); // Adjust panel size
+    insertPanel.setOpaque(false);
 
-    // Create the InsertPanel as a JPanel
-    JPanel insertPanel = new JPanel();
-    insertPanel.setLayout(new BorderLayout()); // Use BorderLayout for easier placement
-    insertPanel.setPreferredSize(new Dimension(80, 120)); // Adjust size for image and button
-    insertPanel.setOpaque(false); // Transparent background
-
-    // Create and load the image for the tile
-    JLabel cellImageLabel = new JLabel();
-    cellImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-    cellImageLabel.setPreferredSize(new Dimension(65, 65)); // Set size for the image
+    // Create JLabel to hold the tile image
+    JLabel tileImageLabel = new JLabel();
+    tileImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    tileImageLabel.setPreferredSize(new Dimension(65, 65));
 
     // Load and set the initial image dynamically
-    if (currentInsertTile.getImage() != null) {
-        ImageIcon scaledIcon = new ImageIcon(currentInsertTile.getImage().getScaledInstance(65, 65, Image.SCALE_SMOOTH));
-        cellImageLabel.setIcon(scaledIcon);
-    } else {
-        System.err.println("Error: InsertPanel tile image not loaded.");
-    }
-    insertPanel.add(cellImageLabel, BorderLayout.CENTER); // Add the image label to the center
+    updateTileImageLabel(tileImageLabel, currentInsertTile);
 
-    // Create the Rotate button
+    // Add the JLabel to the center of the panel
+    insertPanel.add(tileImageLabel, BorderLayout.CENTER);
+    insertPanel.putClientProperty("currentTile", currentInsertTile);
+
+    // Add the Rotate button
     JButton rotateButton = new JButton("Rotate");
-    rotateButton.setPreferredSize(new Dimension(80, 25)); // Adjust size of the button
+    rotateButton.setPreferredSize(new Dimension(80, 25));
     rotateButton.setFont(new Font("Arial", Font.BOLD, 12));
     rotateButton.setForeground(Color.WHITE);
     rotateButton.setOpaque(false);
     rotateButton.setContentAreaFilled(false);
     rotateButton.setBorderPainted(true);
-
-    // Add action listener to rotate the tile
     rotateButton.addActionListener(e -> {
-        // Rotate the tile
-        currentInsertTile.rotateClockwise();
-
-        // Update the image label to reflect the new rotation
-        if (currentInsertTile.getImage() != null) {
-            ImageIcon rotatedIcon = new ImageIcon(currentInsertTile.getImage().getScaledInstance(65, 65, Image.SCALE_SMOOTH));
-            cellImageLabel.setIcon(rotatedIcon);
-        } else {
-            System.err.println("Error: Rotated tile image is null.");
-        }
-
-        // Ensure focus remains on the main game window
-        SwingUtilities.getWindowAncestor(insertPanel).requestFocusInWindow();
+        Tile currentTile = (Tile) insertPanel.getClientProperty("currentTile");
+        // Rotate the tile and update its visual representation
+        currentTile.rotateClockwise();
+        updateTileImageLabel(tileImageLabel, currentTile);
+        gridPanel.revalidate();
+        gridPanel.repaint();
     });
-
-    // Add the Rotate button to the bottom of the panel
     insertPanel.add(rotateButton, BorderLayout.SOUTH);
 
-    // Store the Tile object as a client property for easy access
-    insertPanel.putClientProperty("currentTile", currentInsertTile);
+    // Store the Tile object and JLabel in the InsertPanel for later access
+    insertPanel.putClientProperty("tileImageLabel", tileImageLabel);
 
-    return insertPanel; // Return the complete InsertPanel
+
+    return insertPanel;
 }
+
+private void updateTileImageLabel(JLabel label, Tile tile) {
+    if (tile.getImageIcon() != null) {
+        label.setIcon(tile.getImageIcon()); // Use the latest ImageIcon
+    } else {
+        System.err.println("Error: Tile image is null or invalid.");
+        label.setIcon(null); // Clear the label if the image is invalid
+    }
+}
+
 
 
 
@@ -663,6 +732,7 @@ private static final int playerSize = 25; // Size of a player label
 
 // Define starting positions for players in grid coordinates (row, col)
 private JLayeredPane createGridWithPlayersAndTokens() {
+    
     // Layered pane to hold grid, player pieces, and tokens
     JLayeredPane layeredGridPane = new JLayeredPane();
     layeredGridPane.setPreferredSize(new Dimension(650, 650)); // Match the grid size
@@ -716,6 +786,7 @@ private JLayeredPane createGridWithPlayersAndTokens() {
         tokenLabel.setBounds(x, y, tokenSize, tokenSize); // Set position and size of the token
 
         layeredGridPane.add(tokenLabel, Integer.valueOf(1)); // Add tokens on layer 1
+        tokenMap.put(position, tokenLabel); // Track the token in the map
     }
 
     return layeredGridPane;
@@ -740,11 +811,11 @@ private JLabel createPlayerLabel(int playerNumber, int size) {
 
 private String[] generateTokenPaths() {
     return new String[]{
-        "Pictures/Token/gold_1.png", "Pictures/Token/gold_2.png", "Pictures/Token/gold_3.png",
+        "Pictures/Token/gold_1.png", "Pictures\\MG2.png", "Pictures/Token/gold_3.png",
         "Pictures/Token/gold_4.png", "Pictures/Token/gold_5.png", "Pictures/Token/gold_6.png",
         "Pictures/Token/gold_7.png", "Pictures/Token/gold_8.png", "Pictures/Token/gold_9.png",
-        "Pictures/Token/gold_10.png", "Pictures/Token/gold_11.png", "Pictures/Token/gold_12.png",
-        "Pictures/Token/gold_13.png", "Pictures/Token/gold_14.png", "Pictures/Token/gold_15.png",
+        "Pictures\\MG1.png", "Pictures/Token/gold_11.png", "Pictures/Token/gold_12.png",
+        "Pictures/Token/gold_13.png", "Pictures\\MG3.png", "Pictures/Token/gold_15.png",
         "Pictures/Token/gold_16.png"
     };
 }
@@ -852,18 +923,22 @@ public void showInvalidMoveDialog() {
     );
 }
 
-public Tile getInsertPanelTile() {
-    if (currentInsertTile == null) {
-        System.err.println("Error: currentInsertTile is null!");
-        return null;
-    }
-    return currentInsertTile;
-}
+// public Tile getInsertPanelTile() {
+//     if (currentInsertTile == null) {
+//         System.err.println("Error: currentInsertTile is null!");
+//         return null;
+//     }
+//     return currentInsertTile;
+// }
 
 public JPanel getInsertPanel() {
     // TODO Auto-generated method stub
     //throw new UnsupportedOperationException("Unimplemented method 'getInsertPanel'");
     return insertPanel;
+}
+
+public JLayeredPane getLayeredGridPane() {
+    return layeredPane;
 }
 
 
