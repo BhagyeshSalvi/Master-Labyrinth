@@ -1,0 +1,9 @@
+Changes made
+-added a Gameutils class to generate imagepaths
+
+
+whats working- 
+Chatbox
+Inserting tile in the grid and getting the other tile back in the insert panel
+Player Moving and error dialog boc showing when it comes on the invalid tile
+Player can collect tokens and the tokens are dynamically displayed in the gamearea

@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "DebugFileRead",
+            "request": "launch",
+            "mainClass": "DebugFileRead",
+            "projectName": "Assignment1_2"
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "LanguageTest",
+            "request": "launch",
+            "mainClass": "LanguageTest",
+            "projectName": "Assignment1_2_8501a353",
+            "vmArgs": "-Dfile.encoding=UTF-8"
+        },
+        {
+            "type": "java",
+            "name": "MainGame",
+            "request": "launch",
+            "mainClass": "MainGame",
+            "projectName": "Assignment1_2_8501a353"
+        },
+        {
+            "type": "java",
+            "name": "LanguageTest(1)",
+            "request": "launch",
+            "mainClass": "LanguageTest",
+            "projectName": "Assignment1_2"
+        },
+        {
+            "type": "java",
+            "name": "MainGame(1)",
+            "request": "launch",
+            "mainClass": "MainGame",
+            "projectName": "Assignment1_2"
+        }
+    ]
+}
