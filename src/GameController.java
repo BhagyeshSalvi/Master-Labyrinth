@@ -47,9 +47,6 @@ import javax.swing.JPanel;
         
             // Retrieve the current tile and its JLabel from the InsertPanel
             JPanel insertPanel = view.getInsertPanel();
-            Tile currentInsertTile = (Tile) insertPanel.getClientProperty("currentTile");
-            JLabel tileImageLabel = (JLabel) insertPanel.getClientProperty("tileImageLabel");
-            
             // Pass the JLabel to the shifting logic
             JPanel gridPanel = view.getGridPanel();
             switch (direction) {

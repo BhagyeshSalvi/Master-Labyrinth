@@ -170,26 +170,7 @@ public class MainGame {
     public void setController(GameController controller) {
         this.gameController = controller;
     }
-
-    public void updateInsertPanelTile(Tile newTile) {
-        if (newTile == null) {
-            System.err.println("Error: InsertPanel tile is null.");
-            return;
-        }
-        // Update the currentInsertTile reference
-        insertPanel.putClientProperty("currentTile", newTile);
     
-        // Update the JLabel with the new tile's image
-        JLabel cellImageLabel = (JLabel) insertPanel.getComponent(0);
-        cellImageLabel.setIcon(new ImageIcon(newTile.getImage()));
-        cellImageLabel.repaint();
-    }
-    
-    
-    
-    public JLabel getInsertPanelTileLabel() {
-        return (JLabel) insertPanel.getComponent(0);
-    }
     
     public JPanel getGridPanel() {
         return gridPanel;
@@ -283,7 +264,7 @@ public class MainGame {
                 }
             }
         }
-    
+        gridPanel.setFocusable(true);
         return gridPanel;
     }
     
@@ -331,15 +312,6 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
 
     return pane;
 }
-
-
-
-
-
-
-
-
-    
 
 
     /**
@@ -558,7 +530,7 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         starLabel.setText(stars.toString()); // Update the label with stars
 
         // Ensure the font supports Unicode
-        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 18)); // Use a compatible font
+        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 20)); // Use a compatible font
         starLabel.setForeground(Color.YELLOW); // Optional: Set a star-like color
     }
     public void updatePlayerStars(int playerIndex, int newStarCount) {
@@ -575,8 +547,8 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         starLabel.setText(stars.toString()); // Update the label
         System.out.println("Updated Player " + (playerIndex + 1) + " stars to " + newStarCount);
         // Ensure the font supports Unicode
-        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 18)); // Use a compatible font
-        starLabel.setForeground(Color.YELLOW); // Optional: Set a star-like color
+        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 20)); 
+        starLabel.setForeground(Color.YELLOW); 
     }
 
     private static String normalizePath(String path) {
@@ -684,12 +656,12 @@ private JPanel createInsertPanel(String initialImagePath) {
 
     // Add the Rotate button
     JButton rotateButton = new JButton("Rotate");
-    rotateButton.setPreferredSize(new Dimension(80, 25));
-    rotateButton.setFont(new Font("Arial", Font.BOLD, 12));
+    rotateButton.setPreferredSize(new Dimension(80, 35));
+    rotateButton.setFont(new Font("Arial", Font.BOLD, 17));
     rotateButton.setForeground(Color.WHITE);
     rotateButton.setOpaque(false);
     rotateButton.setContentAreaFilled(false);
-    rotateButton.setBorderPainted(true);
+    rotateButton.setBorderPainted(false);
     rotateButton.addActionListener(e -> {
         Tile currentTile = (Tile) insertPanel.getClientProperty("currentTile");
         // Rotate the tile and update its visual representation
@@ -697,9 +669,11 @@ private JPanel createInsertPanel(String initialImagePath) {
         updateTileImageLabel(tileImageLabel, currentTile);
         gridPanel.revalidate();
         gridPanel.repaint();
+        SwingUtilities.getWindowAncestor(gridPanel).requestFocusInWindow();
     });
     insertPanel.add(rotateButton, BorderLayout.SOUTH);
 
+    rotateButton.setFocusable(false); // Prevent the button from stealing focus
     // Store the Tile object and JLabel in the InsertPanel for later access
     insertPanel.putClientProperty("tileImageLabel", tileImageLabel);
     return insertPanel;
@@ -779,16 +753,11 @@ private JLayeredPane createGridWithPlayersAndTokens() {
         Point position = tokenPositions.get(i); // Get token position
         Map.Entry<String, Boolean> tokenEntry = tokenList.get(i); // Get token path and magic flag
         String tokenPath = tokenEntry.getKey();
-        boolean isMagicCard = tokenEntry.getValue();
+       
 
         JLabel tokenLabel = createTokenLabel(tokenPath, tokenSize);
 
-        // Style magic cards differently
-        // if (isMagicCard) {
-        //     tokenLabel.setBorder(BorderFactory.createLineBorder(Color.MAGENTA, 2)); // Highlight magic cards
-        //     System.out.println("Magic card placed at: " + position);
-        // }
-
+       
         // Calculate token position relative to the grid cell size (60x60)
         int x = position.y * cellSize + (cellSize - tokenSize) / 2; // Center the token horizontally
         int y = position.x * cellSize + (cellSize - tokenSize) / 2; // Center the token vertically
@@ -935,29 +904,13 @@ public void showInvalidMoveDialog() {
     );
 }
 
-// public Tile getInsertPanelTile() {
-//     if (currentInsertTile == null) {
-//         System.err.println("Error: currentInsertTile is null!");
-//         return null;
-//     }
-//     return currentInsertTile;
-// }
+
 
 public JPanel getInsertPanel() {
     // TODO Auto-generated method stub
     //throw new UnsupportedOperationException("Unimplemented method 'getInsertPanel'");
     return insertPanel;
 }
-
-public JLayeredPane getLayeredGridPane() {
-    return layeredPane;
-}
-
-
-
-
-
-
 
 
 
