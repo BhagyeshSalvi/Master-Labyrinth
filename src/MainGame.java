@@ -185,33 +185,6 @@ public class MainGame {
     
     
     
-    
-    public void updateGrid(GameBoard gameBoard) {
-        for (int row = 1; row <= 7; row++) { // Playable rows only
-            for (int col = 1; col <= 7; col++) { // Playable columns only
-                Tile tile = gameBoard.getTileAt(new Point(row, col));
-                if (tile != null) {
-                    int index = (row - 1) * 7 + (col - 1); // Map to gridPanel index
-                    Component component = gridPanel.getComponent(index);
-    
-                    if (component instanceof JLayeredPane) {
-                        JLayeredPane cellPane = (JLayeredPane) component;
-                        Component[] layers = cellPane.getComponentsInLayer(JLayeredPane.DEFAULT_LAYER);
-                        if (layers.length > 0 && layers[0] instanceof JLabel) {
-                            JLabel imageLabel = (JLabel) layers[0];
-                            imageLabel.setIcon(new ImageIcon(tile.getImage()));
-                        }
-                    }
-                }
-            }
-        }
-        
-    
-        gridPanel.revalidate();
-        gridPanel.repaint();
-    }
-    
-    
     public JLabel getInsertPanelTileLabel() {
         return (JLabel) insertPanel.getComponent(0);
     }
@@ -596,6 +569,8 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         starLabel.setText(stars.toString()); // Update the label
         System.out.println("Updated Player " + (playerIndex + 1) + " stars to " + newStarCount);
     }
+
+
     public void collectTokenIfPresent(int playerIndex, Point position) {
         // Step 1: Check if token exists at the given position
         JLabel tokenLabel = tokenMap.get(position);
@@ -604,16 +579,24 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
             return;
         }
     
-        // Step 2: Remove token from layeredGridPane
+        // Debugging: Verify token existence
+        System.out.println("Removing token at position: " + position);
+        System.out.println("Token label: " + tokenLabel);
+        System.out.println("Parent of tokenLabel: " + tokenLabel.getParent());
+    
+        // Step 2: Remove token from layeredPane
         if (layeredPane.isAncestorOf(tokenLabel)) {
-            layeredPane.remove(tokenLabel); // Remove token
-            System.out.println("Token removed from layeredGridPane.");
+            layeredPane.remove(tokenLabel); // Remove token from pane
+            System.out.println("Token removed from layeredPane.");
         } else {
-            System.err.println("Token label is not part of layeredGridPane.");
+            System.err.println("Token label is not part of layeredPane.");
         }
     
-        // Step 3: Verify token parent
-        System.out.println("Parent of tokenLabel after removal: " + tokenLabel.getParent());
+        // Step 3: Explicitly clear the parent reference
+        if (tokenLabel.getParent() != null) {
+            tokenLabel.getParent().remove(tokenLabel);
+            System.out.println("Explicitly removed token from its parent.");
+        }
     
         // Step 4: Update tokenMap
         tokenMap.remove(position);
@@ -632,12 +615,22 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         layeredPane.revalidate();
         layeredPane.repaint();
     
-        // Debugging: Verify the token is no longer in the layeredGridPane
-        System.out.println("Components in layeredGridPane after removal:");
+        // Step 7: Repaint the token's area specifically
+        Rectangle tokenBounds = tokenLabel.getBounds();
+        layeredPane.repaint(tokenBounds);
+    
+        // Debugging: Verify the token is no longer in the layeredPane
+        System.out.println("Components in layeredPane after removal:");
         for (Component component : layeredPane.getComponents()) {
             System.out.println(component);
         }
+    
+        // Debugging: Verify token no longer exists
+        boolean stillExists = Arrays.asList(layeredPane.getComponents()).contains(tokenLabel);
+        System.out.println("Token still exists in layeredPane: " + stillExists);
     }
+    
+    
     
     
 
@@ -701,8 +694,6 @@ private JPanel createInsertPanel(String initialImagePath) {
 
     // Store the Tile object and JLabel in the InsertPanel for later access
     insertPanel.putClientProperty("tileImageLabel", tileImageLabel);
-
-
     return insertPanel;
 }
 

@@ -2,6 +2,7 @@
     import java.util.Map;
 
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -19,6 +20,7 @@ import javax.swing.JPanel;
         }
 
         public void handleMovement(int playerIndex, String direction) {
+           
             Player currentPlayer = gameBoard.getPlayers()[playerIndex]; // Get current player
             Point oldPosition = currentPlayer.getPosition();
         
@@ -84,46 +86,7 @@ import javax.swing.JPanel;
             return null; // Invalid border cell
         }
 
-        // private void shiftTiles(String direction, int row, int col) {
-        //     Tile newTile = view.getInsertPanelTile(); // Get the tile from InsertPanel
-        //     if (newTile == null) {
-        //         System.err.println("InsertPanel tile is null!");
-        //         return;
-        //     }
-        
-        //     Tile tempTile = null;
-        
-        //     System.out.println("Shifting tiles. Direction: " + direction + ", Row: " + row + ", Column: " + col);
-        
-        //     switch (direction) {
-        //         case "down":
-        //             tempTile = gameBoard.shiftColumnDown(col - 1, newTile); // Adjust col to map to playable grid
-        //             break;
-        
-        //         case "up":
-        //             tempTile = gameBoard.shiftColumnUp(col - 1, newTile); // Adjust col to map to playable grid
-        //             break;
-        
-        //         case "left":
-        //             tempTile = gameBoard.shiftRowLeft(row - 1, newTile); // Adjust row to map to playable grid
-        //             break;
-        
-        //         case "right":
-        //             tempTile = gameBoard.shiftRowRight(row - 1, newTile); // Adjust row to map to playable grid
-        //             break;
-        
-        //         default:
-        //             System.err.println("Invalid direction: " + direction);
-        //             break;
-        //     }
-        
-        //     if (tempTile != null) {
-        //         System.out.println("Shift successful. Temp tile: " + tempTile);
-        //         view.updateInsertPanelTile(tempTile); // Update InsertPanel with the shifted-out tile
-        //     } else {
-        //         System.err.println("Shift failed. Temp tile is null.");
-        //     }
-        // }
+       
         
         
         
