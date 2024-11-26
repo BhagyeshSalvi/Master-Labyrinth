@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.awt.event.*;
@@ -32,6 +33,7 @@ public class MainGame {
     private JPanel gridPanel;    
     private Map<Point, JLabel> tokenMap = new HashMap<>(); // To track tokens by their grid position
     private JLabel[] playerStarLabels;
+    private Map<String, JLabel> magicalComponentLabels;
 
     
     
@@ -134,7 +136,7 @@ public class MainGame {
         
         // Create and add the game area panel
         JPanel gameAreaPanel = createGameAreaPanel();
-        gameAreaPanel.setBounds(970, 50, 200, 200);
+        gameAreaPanel.setBounds(970, 50, 300, 200);
         layeredPane.add(gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
 
         // Create and add the insert panel
@@ -516,7 +518,7 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         JPanel gameAreaPanel = new JPanel();
         gameAreaPanel.setLayout(new GridLayout(4, 1)); // Vertical layout for 4 players
         gameAreaPanel.setOpaque(false); // Make the background transparent if desired
-    
+       
         // Player names and star counts
         String[] playerNames = {"Player 1", "Player 2", "Player 3", "Player 4"};
         int[] starCounts = {0, 5, 2, 4}; // Initial star counts for each player
@@ -551,9 +553,13 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
     private void updateStars(JLabel starLabel, int count) {
         StringBuilder stars = new StringBuilder();
         for (int j = 0; j < count; j++) {
-            stars.append("* "); // Append stars
+            stars.append("\u2605 "); // Append stars
         }
         starLabel.setText(stars.toString()); // Update the label with stars
+
+        // Ensure the font supports Unicode
+        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 18)); // Use a compatible font
+        starLabel.setForeground(Color.YELLOW); // Optional: Set a star-like color
     }
     public void updatePlayerStars(int playerIndex, int newStarCount) {
         if (playerIndex < 0 || playerIndex >= playerStarLabels.length) {
@@ -564,71 +570,73 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         JLabel starLabel = playerStarLabels[playerIndex]; // Get the star label for the player
         StringBuilder stars = new StringBuilder();
         for (int i = 0; i < newStarCount; i++) {
-            stars.append("* "); // Add stars dynamically
+            stars.append("\u2605 "); // Add stars dynamically
         }
         starLabel.setText(stars.toString()); // Update the label
         System.out.println("Updated Player " + (playerIndex + 1) + " stars to " + newStarCount);
+        // Ensure the font supports Unicode
+        starLabel.setFont(new Font("Arial Unicode MS", Font.BOLD, 18)); // Use a compatible font
+        starLabel.setForeground(Color.YELLOW); // Optional: Set a star-like color
     }
+
+    private static String normalizePath(String path) {
+        return path.trim().replace("\\", "/").toLowerCase(); // Trim spaces, unify separators, and lowercase
+    }
+    
 
 
     public void collectTokenIfPresent(int playerIndex, Point position) {
-        // Step 1: Check if token exists at the given position
         JLabel tokenLabel = tokenMap.get(position);
         if (tokenLabel == null) {
             System.err.println("No token found at position: " + position);
             return;
         }
     
-        // Debugging: Verify token existence
-        System.out.println("Removing token at position: " + position);
-        System.out.println("Token label: " + tokenLabel);
-        System.out.println("Parent of tokenLabel: " + tokenLabel.getParent());
+        String tokenPath = ((ImageIcon) tokenLabel.getIcon()).getDescription();
+        System.out.println("magic label ke upar" + tokenPath);
+        Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths();
+        boolean isMagicCard = tokenPaths.getOrDefault(tokenPath, true);
+        JLabel magicalLabel = magicalComponentLabels.get(tokenPath);
+        System.out.println("Magic Label Retrieved: " + magicalLabel);
+
+        if (isMagicCard) {
+
+            if (magicalLabel != null) {
+                Icon grayscaleIcon = Tile.createGrayscaleIcon(tokenPath, 80, 80); 
+
+                if (grayscaleIcon != null) {
+                    magicalLabel.setIcon(grayscaleIcon);
+                } else {
+                    System.err.println("Failed to create grayscale icon for: " + tokenPath);
+                }
+                magicalLabel.setText("Collected");
+                magicalLabel.setHorizontalTextPosition(SwingConstants.CENTER);
+                magicalLabel.setVerticalTextPosition(SwingConstants.CENTER);
+                magicalLabel.setFont(new Font("Arial", Font.BOLD, 17));
+                magicalLabel.setForeground(Color.black);
+                magicalLabel.getParent().revalidate();
+                magicalLabel.getParent().repaint();
+                System.out.println("Updated magic card: " + tokenPath);
+            } else {
+                System.err.println("No corresponding magic card found for: " + tokenPath);
+            }
+        }
     
-        // Step 2: Remove token from layeredPane
         if (layeredPane.isAncestorOf(tokenLabel)) {
-            layeredPane.remove(tokenLabel); // Remove token from pane
-            System.out.println("Token removed from layeredPane.");
-        } else {
-            System.err.println("Token label is not part of layeredPane.");
-        }
-    
-        // Step 3: Explicitly clear the parent reference
-        if (tokenLabel.getParent() != null) {
             tokenLabel.getParent().remove(tokenLabel);
-            System.out.println("Explicitly removed token from its parent.");
+            System.out.println("Token removed from layeredPane.");
         }
-    
-        // Step 4: Update tokenMap
         tokenMap.remove(position);
-        System.out.println("Token removed from tokenMap: " + position);
     
-        // Step 5: Update player's star count
+    
         Player currentPlayer = gameBoard.getPlayers()[playerIndex];
         currentPlayer.collectStar();
-        int newStarCount = currentPlayer.getStarsCollected();
-        updatePlayerStars(playerIndex, newStarCount);
+        updatePlayerStars(playerIndex, currentPlayer.getStarsCollected());
     
-        // Debugging: Log player's updated star count
-        System.out.println("Player " + (playerIndex + 1) + " collected a token and now has " + newStarCount + " stars.");
-    
-        // Step 6: Force a UI refresh
         layeredPane.revalidate();
         layeredPane.repaint();
-    
-        // Step 7: Repaint the token's area specifically
-        Rectangle tokenBounds = tokenLabel.getBounds();
-        layeredPane.repaint(tokenBounds);
-    
-        // Debugging: Verify the token is no longer in the layeredPane
-        System.out.println("Components in layeredPane after removal:");
-        for (Component component : layeredPane.getComponents()) {
-            System.out.println(component);
-        }
-    
-        // Debugging: Verify token no longer exists
-        boolean stillExists = Arrays.asList(layeredPane.getComponents()).contains(tokenLabel);
-        System.out.println("Token still exists in layeredPane: " + stillExists);
     }
+      
     
     
     
@@ -723,7 +731,6 @@ private static final int playerSize = 25; // Size of a player label
 
 // Define starting positions for players in grid coordinates (row, col)
 private JLayeredPane createGridWithPlayersAndTokens() {
-    
     // Layered pane to hold grid, player pieces, and tokens
     JLayeredPane layeredGridPane = new JLayeredPane();
     layeredGridPane.setPreferredSize(new Dimension(650, 650)); // Match the grid size
@@ -736,22 +743,22 @@ private JLayeredPane createGridWithPlayersAndTokens() {
     // Add the grid panel to the bottom layer
     layeredGridPane.add(gridPanel, Integer.valueOf(0)); // Grid is layer 0
 
-   // Initialize player labels array
-   playerLabels = new JLabel[PLAYER_START_POSITIONS.length];
+    // Initialize player labels array
+    playerLabels = new JLabel[PLAYER_START_POSITIONS.length];
 
-   // Add player pieces
-   for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
-       Point position = PLAYER_START_POSITIONS[i];
-       JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
+    // Add player pieces
+    for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
+        Point position = PLAYER_START_POSITIONS[i];
+        JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
 
-       // Calculate player position
-       int x = position.y * cellSize + (cellSize - playerSize) / 2;
-       int y = position.x * cellSize + (cellSize - playerSize) / 2;
-       playerLabel.setBounds(x, y, playerSize, playerSize);
+        // Calculate player position
+        int x = position.y * cellSize + (cellSize - playerSize) / 2;
+        int y = position.x * cellSize + (cellSize - playerSize) / 2;
+        playerLabel.setBounds(x, y, playerSize, playerSize);
 
-       layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add player to layer 1
-       playerLabels[i] = playerLabel; // Store reference to player label
-   }
+        layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add player to layer 1
+        playerLabels[i] = playerLabel; // Store reference to player label
+    }
 
     // Define the square pattern for token positions
     List<Point> tokenPositions = Arrays.asList(
@@ -761,15 +768,26 @@ private JLayeredPane createGridWithPlayersAndTokens() {
         new Point(6, 3), new Point(5, 3), new Point(4, 3)
     );
 
-    // Randomize token images
-    String[] tokenPaths = generateTokenPaths(); // Assume this returns the paths for token images
-    Collections.shuffle(Arrays.asList(tokenPaths)); // Shuffle the tokens
+    // Generate token paths with their identifiers
+    Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths(); // Map of token paths and magic card flag
+    List<Map.Entry<String, Boolean>> tokenList = new ArrayList<>(tokenPaths.entrySet());
+    Collections.shuffle(tokenList); // Shuffle the tokens
 
     // Add tokens in the randomized order
     int tokenSize = 20; // Token size (smaller than players)
     for (int i = 0; i < tokenPositions.size(); i++) {
         Point position = tokenPositions.get(i); // Get token position
-        JLabel tokenLabel = createTokenLabel(tokenPaths[i], tokenSize);
+        Map.Entry<String, Boolean> tokenEntry = tokenList.get(i); // Get token path and magic flag
+        String tokenPath = tokenEntry.getKey();
+        boolean isMagicCard = tokenEntry.getValue();
+
+        JLabel tokenLabel = createTokenLabel(tokenPath, tokenSize);
+
+        // Style magic cards differently
+        // if (isMagicCard) {
+        //     tokenLabel.setBorder(BorderFactory.createLineBorder(Color.MAGENTA, 2)); // Highlight magic cards
+        //     System.out.println("Magic card placed at: " + position);
+        // }
 
         // Calculate token position relative to the grid cell size (60x60)
         int x = position.y * cellSize + (cellSize - tokenSize) / 2; // Center the token horizontally
@@ -782,7 +800,6 @@ private JLayeredPane createGridWithPlayersAndTokens() {
 
     return layeredGridPane;
 }
-
 
 
 
@@ -800,28 +817,31 @@ private JLabel createPlayerLabel(int playerNumber, int size) {
     return playerLabel;
 }
 
-private String[] generateTokenPaths() {
-    return new String[]{
-        "Pictures/Token/gold_1.png", "Pictures\\MG2.png", "Pictures/Token/gold_3.png",
-        "Pictures/Token/gold_4.png", "Pictures/Token/gold_5.png", "Pictures/Token/gold_6.png",
-        "Pictures/Token/gold_7.png", "Pictures/Token/gold_8.png", "Pictures/Token/gold_9.png",
-        "Pictures\\MG1.png", "Pictures/Token/gold_11.png", "Pictures/Token/gold_12.png",
-        "Pictures/Token/gold_13.png", "Pictures\\MG3.png", "Pictures/Token/gold_15.png",
-        "Pictures/Token/gold_16.png"
-    };
-}
 
-private JLabel createTokenLabel(String imagePath, int size) {
-    ImageIcon tokenIcon = new ImageIcon(imagePath);
 
-    // Scale the image
-    Image scaledImage = tokenIcon.getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH);
-    JLabel tokenLabel = new JLabel(new ImageIcon(scaledImage));
-    tokenLabel.setOpaque(false); // Transparent background
+
+private JLabel createTokenLabel(String tokenPath, int tokenSize) {
+    ImageIcon tokenIcon = new ImageIcon(tokenPath);
+    tokenIcon.setDescription(tokenPath); // Set the description to the token path
+
+    // Resize the icon to fit the token size
+    Image scaledImage = tokenIcon.getImage().getScaledInstance(tokenSize, tokenSize, Image.SCALE_SMOOTH);
+    tokenIcon = new ImageIcon(scaledImage);
+    tokenIcon.setDescription(tokenPath); // Ensure the description remains after resizing
+
+    JLabel tokenLabel = new JLabel(tokenIcon);
+    tokenLabel.setHorizontalAlignment(SwingConstants.CENTER);
+    tokenLabel.setVerticalAlignment(SwingConstants.CENTER);
+
     return tokenLabel;
 }
 
+
+
 private JPanel createMagicalComponentsPanel() {
+    // Initialize the map to track magical components
+    magicalComponentLabels = new HashMap<>();
+
     // Create a panel for the magical components
     JPanel magicalPanel = new JPanel();
     magicalPanel.setLayout(new GridLayout(1, 3, 10, 10)); // 1 row, 3 columns, with spacing
@@ -832,7 +852,6 @@ private JPanel createMagicalComponentsPanel() {
         "Pictures/MG1.png",
         "Pictures/MG2.png",
         "Pictures/MG3.png",
-       
     };
 
     for (String componentPath : componentPaths) {
@@ -845,10 +864,13 @@ private JPanel createMagicalComponentsPanel() {
             JLabel componentLabel = new JLabel(new ImageIcon(scaledImage));
             componentLabel.setHorizontalAlignment(SwingConstants.CENTER);
             componentLabel.setVerticalAlignment(SwingConstants.CENTER);
-            
+            System.out.println("Added magic label for: " + componentPath);
 
 
-            // Add component label to the panel
+            // Store label reference in the map
+            magicalComponentLabels.put(normalizePath(componentPath), componentLabel);
+
+            // Add the label to the panel
             magicalPanel.add(componentLabel);
         } catch (Exception e) {
             System.err.println("Error loading magical component image: " + componentPath);
@@ -860,10 +882,9 @@ private JPanel createMagicalComponentsPanel() {
         }
     }
 
-    // Set preferred size for the magical components panel
-    //magicalPanel.setPreferredSize(new Dimension(300, 150));
     return magicalPanel;
 }
+
 
 public void updatePlayerPosition(int playerIndex, Point newPosition) {
     JLabel playerLabel = playerLabels[playerIndex]; // Get the player's JLabel
@@ -931,6 +952,7 @@ public JPanel getInsertPanel() {
 public JLayeredPane getLayeredGridPane() {
     return layeredPane;
 }
+
 
 
 

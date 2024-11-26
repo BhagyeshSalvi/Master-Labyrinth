@@ -1,8 +1,12 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GameUtils {
+   
+
     public static List<String> generateImageList() {
         String[] imagePaths = {
             "Pictures/GridCell/brick_cross.png",
@@ -33,4 +37,35 @@ public class GameUtils {
 
         return imageList;
     }
+
+    public static Map<String, Boolean> generateTokenPaths() {
+    Map<String, Boolean> tokenPaths = new LinkedHashMap<>(); // Maintain insertion order
+    
+    // Add regular tokens (false means not a magic card)
+    tokenPaths.put("Pictures/Token/gold_1.png", false);
+    tokenPaths.put("Pictures/Token/gold_3.png", false);
+    tokenPaths.put("Pictures/Token/gold_4.png", false);
+    tokenPaths.put("Pictures/Token/gold_5.png", false);
+    tokenPaths.put("Pictures/Token/gold_6.png", false);
+    tokenPaths.put("Pictures/Token/gold_7.png", false);
+    tokenPaths.put("Pictures/Token/gold_8.png", false);
+    tokenPaths.put("Pictures/Token/gold_9.png", false);
+    tokenPaths.put("Pictures/Token/gold_11.png", false);
+    tokenPaths.put("Pictures/Token/gold_12.png", false);
+    tokenPaths.put("Pictures/Token/gold_13.png", false);
+    tokenPaths.put("Pictures/Token/gold_15.png", false);
+    tokenPaths.put("Pictures/Token/gold_16.png", false);
+
+    tokenPaths.put(normalizePath("Pictures/MG1.png"), true);
+    tokenPaths.put(normalizePath("Pictures/MG2.png"), true);
+    tokenPaths.put(normalizePath("Pictures/MG3.png"), true);
+
+    
+    return tokenPaths;
+}
+
+private static String normalizePath(String path) {
+    return path.trim().replace("\\", "/").toLowerCase(); // Trim spaces, unify separators, and lowercase
+}
+
 }

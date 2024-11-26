@@ -1,5 +1,10 @@
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
 public class Tile {
@@ -124,4 +129,30 @@ public class Tile {
     public boolean isMovable() {
         return isMovable;
     }
+
+    public static Icon createGrayscaleIcon(String imagePath, int width, int height) {
+    try {
+        // Load the original image
+        BufferedImage original = ImageIO.read(new File(imagePath));
+        BufferedImage grayscale = new BufferedImage(
+            original.getWidth(),
+            original.getHeight(),
+            BufferedImage.TYPE_BYTE_GRAY
+        );
+
+        // Draw the original image onto the grayscale image
+        Graphics g = grayscale.getGraphics();
+        g.drawImage(original, 0, 0, null);
+        g.dispose();
+
+        // Resize the image to fit the JLabel if necessary
+        Image scaledImage = grayscale.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaledImage);
+
+    } catch (IOException e) {
+        e.printStackTrace();
+        return null; // Return null if the image cannot be loaded
+    }
+}
+
 }
