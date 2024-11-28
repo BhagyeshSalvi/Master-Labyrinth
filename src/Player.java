@@ -12,13 +12,14 @@ public class Player {
         this.position = position;
         this.color = color;
     }
+
     public void collectStar() {
-        starsCollected++; // Increment the star count
-        System.out.println("Star collected! Total stars: " + starsCollected);
+        starsCollected++;
+        System.out.println(name + " collected a star! Total stars: " + starsCollected);
     }
 
     public int getStarsCollected() {
-        return starsCollected; // Getter for stars
+        return starsCollected;
     }
 
     public Point getPosition() {
@@ -26,23 +27,15 @@ public class Player {
     }
 
     public void setPosition(Point position) {
+        System.out.println("Player " + name + " position updated from: " + this.position + " to: " + position);
         this.position = position;
     }
 
-    public void move(String direction, int gridSize) {
-        switch (direction.toLowerCase()) {
-            case "up":
-                if (position.x > 2) position.x--; // Move up
-                break;
-            case "down":
-                if (position.x < gridSize - 2) position.x++; // Move down
-                break;
-            case "left":
-                if (position.y > 2) position.y--; // Move left
-                break;
-            case "right":
-                if (position.y < gridSize - 2) position.y++; // Move right
-                break;
-        }
+    public String getName() {
+        return name;
+    }
+
+    public Color getColor() {
+        return color;
     }
 }

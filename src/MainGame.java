@@ -41,10 +41,10 @@ public class MainGame {
 
     public MainGame(){
         Player[] players = {
-            new Player("Player 1", new Point(4, 4), Color.RED),
-            new Player("Player 2", new Point(4, 6), Color.BLUE),
-            new Player("Player 3", new Point(6, 4), Color.GREEN),
-            new Player("Player 4", new Point(6, 6), Color.YELLOW)
+            new Player("Player 1", new Point(3, 3), Color.RED),
+            new Player("Player 2", new Point(3, 5), Color.BLUE),
+            new Player("Player 3", new Point(5, 3), Color.GREEN),
+            new Player("Player 4", new Point(5, 5), Color.YELLOW)
         };
         GameBoard gameBoard = new GameBoard(9, players);
         this.gameController = new GameController(gameBoard); // Initialize GameController
@@ -95,17 +95,17 @@ public class MainGame {
 
         // Initialize players
         Player[] players = {
-            new Player("Player 1", new Point(4, 4), Color.RED),
-            new Player("Player 2", new Point(4, 6), Color.BLUE),
-            new Player("Player 3", new Point(6, 4), Color.GREEN),
-            new Player("Player 4", new Point(6, 6), Color.YELLOW)
+            new Player("Player 1", new Point(3, 3), Color.RED),
+            new Player("Player 2", new Point(3, 5), Color.BLUE),
+            new Player("Player 3", new Point(5, 3), Color.GREEN),
+            new Player("Player 4", new Point(5, 5), Color.YELLOW)
         };
 
         // Initialize the game board
         gameBoard = new GameBoard(9, players);
         this.gameController = new GameController(gameBoard,this);
 
-
+        
         JFrame frame = createFrame();
 
         // Create a layered pane to hold background and grid
@@ -159,6 +159,7 @@ public class MainGame {
         frame.requestFocusInWindow();
 
 
+        
         // Setup key listeners
     GameController controller = new GameController(gameBoard, this); // Pass game board and view
     setupKeyListeners(frame, controller);
@@ -565,12 +566,11 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         }
     
         String tokenPath = ((ImageIcon) tokenLabel.getIcon()).getDescription();
-        System.out.println("magic label ke upar" + tokenPath);
+        
         Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths();
         boolean isMagicCard = tokenPaths.getOrDefault(tokenPath, true);
         JLabel magicalLabel = magicalComponentLabels.get(tokenPath);
-        System.out.println("Magic Label Retrieved: " + magicalLabel);
-
+       
         if (isMagicCard) {
 
             if (magicalLabel != null) {
@@ -705,70 +705,62 @@ private static final int playerSize = 25; // Size of a player label
 
 // Define starting positions for players in grid coordinates (row, col)
 private JLayeredPane createGridWithPlayersAndTokens() {
-    // Layered pane to hold grid, player pieces, and tokens
     JLayeredPane layeredGridPane = new JLayeredPane();
-    layeredGridPane.setPreferredSize(new Dimension(650, 650)); // Match the grid size
+    layeredGridPane.setPreferredSize(new Dimension(650, 650));
     layeredGridPane.setBounds(50, 50, 650, 650);
 
-    // Create the grid panel
     gridPanel = createGridPanel();
-    gridPanel.setBounds(0, 0, 650, 650); // Align grid panel within the layered pane
+    gridPanel.setBounds(0, 0, 650, 650);
+    layeredGridPane.add(gridPanel, Integer.valueOf(0));
 
-    // Add the grid panel to the bottom layer
-    layeredGridPane.add(gridPanel, Integer.valueOf(0)); // Grid is layer 0
+    Player[] players = gameBoard.getPlayers();
+    playerLabels = new JLabel[players.length];
 
-    // Initialize player labels array
-    playerLabels = new JLabel[PLAYER_START_POSITIONS.length];
-
-    // Add player pieces
-    for (int i = 0; i < PLAYER_START_POSITIONS.length; i++) {
-        Point position = PLAYER_START_POSITIONS[i];
+    // Initialize players
+    for (int i = 0; i < players.length; i++) {
+        Point position = players[i].getPosition(); // Use GameBoard's logical position
         JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
 
-        // Calculate player position
-        int x = position.y * cellSize + (cellSize - playerSize) / 2;
-        int y = position.x * cellSize + (cellSize - playerSize) / 2;
+        int x = (position.y + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
+        int y = (position.x + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
+        
         playerLabel.setBounds(x, y, playerSize, playerSize);
 
-        layeredGridPane.add(playerLabel, Integer.valueOf(1)); // Add player to layer 1
-        playerLabels[i] = playerLabel; // Store reference to player label
+        System.out.println("Player " + (i + 1) + " initialized at: " + position + " (x: " + x + ", y: " + y + ")");
+        layeredGridPane.add(playerLabel, Integer.valueOf(2)); // Place players on a higher layer
+        playerLabels[i] = playerLabel;
     }
 
-    // Define the square pattern for token positions
+    // Initialize tokens
     List<Point> tokenPositions = Arrays.asList(
-        new Point(3, 3), new Point(3, 4), new Point(3, 5), new Point(3, 6), new Point(3, 7),
-        new Point(4, 7), new Point(5, 7), new Point(6, 7), new Point(7, 7),
-        new Point(7, 6), new Point(7, 5), new Point(7, 4), new Point(7, 3),
-        new Point(6, 3), new Point(5, 3), new Point(4, 3)
+        new Point(2, 2), new Point(2, 3), new Point(2, 4), new Point(2, 5), new Point(2, 6),
+        new Point(3, 6), new Point(4, 6), new Point(5, 6), new Point(6, 6),
+        new Point(6, 5), new Point(6, 4), new Point(6, 3), new Point(6, 2),
+        new Point(5, 2), new Point(4, 2), new Point(3, 2)
     );
-
-    // Generate token paths with their identifiers
-    Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths(); // Map of token paths and magic card flag
+    Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths();
     List<Map.Entry<String, Boolean>> tokenList = new ArrayList<>(tokenPaths.entrySet());
-    Collections.shuffle(tokenList); // Shuffle the tokens
+    Collections.shuffle(tokenList);
 
-    // Add tokens in the randomized order
-    int tokenSize = 20; // Token size (smaller than players)
+    int tokenSize = 20;
     for (int i = 0; i < tokenPositions.size(); i++) {
-        Point position = tokenPositions.get(i); // Get token position
-        Map.Entry<String, Boolean> tokenEntry = tokenList.get(i); // Get token path and magic flag
-        String tokenPath = tokenEntry.getKey();
-       
+        Point logicalPosition = tokenPositions.get(i);
+        Map.Entry<String, Boolean> tokenEntry = tokenList.get(i);
 
-        JLabel tokenLabel = createTokenLabel(tokenPath, tokenSize);
+        JLabel tokenLabel = createTokenLabel(tokenEntry.getKey(), tokenSize);
+       // Apply offset to map logical position (0-based) to visual position (1-based)
+    int x = (logicalPosition.y + 1) * cellSize + (cellSize - tokenSize) / 2;
+    int y = (logicalPosition.x + 1) * cellSize + (cellSize - tokenSize) / 2;
+        tokenLabel.setBounds(x, y, tokenSize, tokenSize);
 
-       
-        // Calculate token position relative to the grid cell size (60x60)
-        int x = position.y * cellSize + (cellSize - tokenSize) / 2; // Center the token horizontally
-        int y = position.x * cellSize + (cellSize - tokenSize) / 2; // Center the token vertically
-        tokenLabel.setBounds(x, y, tokenSize, tokenSize); // Set position and size of the token
-
-        layeredGridPane.add(tokenLabel, Integer.valueOf(1)); // Add tokens on layer 1
-        tokenMap.put(position, tokenLabel); // Track the token in the map
+        System.out.println("Token added at logical position: " + logicalPosition + " (x: " + x + ", y: " + y + ")");
+        layeredGridPane.add(tokenLabel, Integer.valueOf(1)); // Tokens on a lower layer
+        tokenMap.put(logicalPosition, tokenLabel);
     }
 
     return layeredGridPane;
 }
+
 
 
 
@@ -856,43 +848,53 @@ private JPanel createMagicalComponentsPanel() {
 
 
 public void updatePlayerPosition(int playerIndex, Point newPosition) {
-    JLabel playerLabel = playerLabels[playerIndex]; // Get the player's JLabel
+    JLabel playerLabel = playerLabels[playerIndex];
 
     // Calculate new position in the grid
-    int x = newPosition.y * cellSize + (cellSize - playerSize) / 2;
-    int y = newPosition.x * cellSize + (cellSize - playerSize) / 2;
+    int x = (newPosition.y + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
+    int y = (newPosition.x + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
+
+    System.out.println("Updating UI for Player " + playerIndex + 
+        " to new position: " + newPosition + " (x: " + x + ", y: " + y + ")");
 
     // Update the label's position
     playerLabel.setBounds(x, y, playerSize, playerSize);
+   
+    
     playerLabel.repaint(); // Refresh the UI
+    System.out.println("Player label updated to pixel position: (x: " + x + ", y: " + y + ")");
 }
 
-//Key listener to move player
+
+
+private boolean isKeyListenerAdded = false;
+
 private void setupKeyListeners(JFrame frame, GameController controller) {
+    if (isKeyListenerAdded) return; // Avoid adding the listener multiple times
+    isKeyListenerAdded = true;
+
     frame.addKeyListener(new KeyAdapter() {
         @Override
         public void keyPressed(KeyEvent e) {
             String direction = null;
             switch (e.getKeyCode()) {
-                case KeyEvent.VK_UP:
-                    direction = "up";
-                    break;
-                case KeyEvent.VK_DOWN:
-                    direction = "down";
-                    break;
-                case KeyEvent.VK_LEFT:
-                    direction = "left";
-                    break;
-                case KeyEvent.VK_RIGHT:
-                    direction = "right";
-                    break;
+                case KeyEvent.VK_UP: direction = "up"; break;
+                case KeyEvent.VK_DOWN: direction = "down"; break;
+                case KeyEvent.VK_LEFT: direction = "left"; break;
+                case KeyEvent.VK_RIGHT: direction = "right"; break;
             }
+
             if (direction != null) {
-                controller.handleMovement(0, direction); // Assuming Player 0 for now
+                System.out.println("Key Pressed: " + direction);
+                controller.handleMovement(0, direction); // Player 0
             }
         }
     });
+
+    System.out.println("Key Listener Attached");
 }
+
+
 
 //dialog box to show invalid move
 public void showInvalidMoveDialog() {

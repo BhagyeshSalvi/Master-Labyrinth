@@ -1,6 +1,7 @@
 import java.awt.Component;
 import java.awt.Image;
 import java.awt.Point;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,16 +22,14 @@ public class GameBoard {
         this.size = size;
         this.players = players;
         this.tiles = new Tile[size][size]; // Initialize grid
-        List<String> imageList = GameUtils.generateImageList();
-        initializeTiles(imageList);
+      //  List<String> imageList = GameUtils.getTileFrequencies()
+        initializeTiles();
+        // System.out.println(getTile(4, 4));
         
     
     }
 
-    public Tile getTile(int row, int col) {
-        if (row < 0 || row >= 9 || col < 0 || col >= 9) return null; // Bounds check
-        return tiles[row][col];
-    }
+    
     
     private Map<Point, JLabel> tokenMap = new HashMap<>();
 
@@ -42,35 +41,67 @@ public class GameBoard {
         tokenMap.put(position, tokenLabel);
     }
 
-    private void initializeTiles(List<String> imageList) {
-        Collections.shuffle(imageList); // Shuffle for random placement
-        int imageIndex = 0;
-
+    private void initializeTiles() {
+        Map<String, Integer> tileFrequencies = GameUtils.getTileFrequencies();
+        Map<String, String> tileTypeMapping = GameUtils.getTileTypeMapping();
+        List<String> availableTiles = new ArrayList<>(tileFrequencies.keySet());
+        Collections.shuffle(availableTiles);
+    
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
                 if ((row == 2 || row == 4 || row == 6) && (col == 0 || col == 8)) {
                     String imagePath = (col == 0)
                         ? "Pictures/GridCell/insert_right.png"
                         : "Pictures/GridCell/insert_left.png";
-                    tiles[row][col] = new Tile(imagePath, row, col, false);
+                    tiles[row][col] = new Tile("insert", imagePath, row, col, false);
                 } else if ((col == 2 || col == 4 || col == 6) && (row == 0 || row == 8)) {
                     String imagePath = (row == 0)
                         ? "Pictures/GridCell/insert_down.png"
                         : "Pictures/GridCell/insert_up.png";
-                    tiles[row][col] = new Tile(imagePath, row, col, false);
+                    tiles[row][col] = new Tile("insert", imagePath, row, col, false);
                 } else if (row >= 1 && row <= 7 && col >= 1 && col <= 7) {
-                    if (imageIndex < imageList.size()) {
-                        tiles[row][col] = new Tile(imageList.get(imageIndex), row, col, true);
-                        imageIndex++;
+                    String selectedTile = getRandomTile(tileFrequencies, availableTiles);
+                    if (selectedTile != null) {
+                        tiles[row][col] = new Tile(tileTypeMapping.get(selectedTile), selectedTile, row, col, true);
                     } else {
-                        tiles[row][col] = new Tile("Pictures/placeholder.png", row, col, true);
+                        tiles[row][col] = new Tile("placeholder", "Pictures/placeholder.png", row, col, true);
                     }
                 } else {
-                    tiles[row][col] = null; // Empty corners
+                    tiles[row][col] = null;
+                }
+    
+                // Debug log for each tile
+                if (tiles[row][col] != null) {
+                    System.out.println("Tile at (" + row + ", " + col + "): " +
+                        "Type: " + tiles[row][col].getType() +
+                        ", Connections: " + tiles[row][col].getConnections());
                 }
             }
         }
-        
+    }
+    
+    
+    private String getRandomTile(Map<String, Integer> tileFrequencies, List<String> availableTiles) {
+        Collections.shuffle(availableTiles); // Randomize the selection order
+        for (String tile : availableTiles) {
+            int remaining = tileFrequencies.getOrDefault(tile, 0);
+            if (remaining > 0) {
+                tileFrequencies.put(tile, remaining - 1); // Decrement the count
+                return tile; // Return the selected tile path
+            }
+        }
+        return null; // No more tiles available
+    }
+    
+    public Tile getTile(int row, int col) {
+        if (row < 0 || row >=9 || col < 0 || col >= 9) {
+            System.out.println("Requested position (" + row + ", " + col + ") is out of bounds.");
+            return null;
+        }
+        Tile tile = tiles[row][col];
+        System.out.println("Accessed Tile at (" + row + ", " + col + "): " +
+            (tile != null ? "Type: " + tile.getType() + ", Connections: " + tile.getConnections() : "null"));
+        return tile;
     }
     
     
@@ -102,40 +133,43 @@ public class GameBoard {
         Point newPosition = new Point(currentPosition);
     
         switch (direction.toLowerCase()) {
-            case "up":
-                newPosition.translate(-1, 0); // Move up
-                break;
-            case "down":
-                newPosition.translate(1, 0); // Move down
-                break;
-            case "left":
-                newPosition.translate(0, -1); // Move left
-                break;
-            case "right":
-                newPosition.translate(0, 1); // Move right
-                break;
+            case "up": newPosition.translate(-1, 0); break;
+            case "down": newPosition.translate(1, 0); break;
+            case "left": newPosition.translate(0, -1); break;
+            case "right": newPosition.translate(0, 1); break;
         }
     
-        // Debugging: Print newPosition and validation
-        System.out.println("Attempting to move to: " + newPosition + 
-                           " | Valid: " + isValidPosition(newPosition));
-    
-        // Validate the position
-        if (isValidPosition(newPosition) && !isTileOccupied(newPosition)) {
-            player.setPosition(newPosition); // Update player's logical position
-            return true; // Valid move
+        if (!isValidPosition(newPosition)) {
+            System.out.println("Invalid move: Target out of bounds at " + newPosition);
+            return false;
         }
     
-        return false; // Invalid move
+        Tile currentTile = getTile(currentPosition.x, currentPosition.y);
+        Tile targetTile = getTile(newPosition.x, newPosition.y);
+    
+        if (currentTile == null || targetTile == null) {
+            System.out.println("Invalid move: One of the tiles is null");
+            return false;
+        }
+    
+        if (canMove(player, direction)) {
+            System.out.println("Player moved from " + currentPosition + " to " + newPosition);
+            player.setPosition(newPosition);
+            return true;
+        } else {
+            System.out.println("Move blocked");
+            return false;
+        }
     }
+    
     
     
 
     // Validate if a position is within bounds and not blocked
-    private boolean isValidPosition(Point position) {
+    public boolean isValidPosition(Point position) {
         // Ensure the position is within the playable grid (2 to 8 for both rows and cols)
-        return position.x >= 2 && position.x <= 8 &&
-               position.y >= 2 && position.y <= 8;
+        return position.x >= 1 && position.x <= 7 &&
+               position.y >= 1 && position.y <= 7;
     }
     
     public boolean isTileOccupied(Point position) {
@@ -211,6 +245,7 @@ public class GameBoard {
         // Update the InsertPanel with the last playable Tile
         insertPanel.putClientProperty("currentTile", lastTile);
         updateInsertPanelIcon(insertPanel, lastTile);
+       
     
         // Refresh the grid
         gridPanel.revalidate();
@@ -353,7 +388,98 @@ public class GameBoard {
         gridPanel.revalidate();
         gridPanel.repaint();
     }
+
+
+    public boolean canMove(Player player, String direction) {
+        Point currentPosition = player.getPosition();
+        Point targetPosition = new Point(currentPosition);
     
+        // Determine the target position
+        switch (direction.toLowerCase()) {
+            case "up": targetPosition.translate(-1, 0); break;
+            case "down": targetPosition.translate(1, 0); break;
+            case "left": targetPosition.translate(0, -1); break;
+            case "right": targetPosition.translate(0, 1); break;
+        }
+    
+        System.out.println("Attempting to move from " + currentPosition + " to " + targetPosition);
+    
+        // Validate bounds
+        if (!isValidPosition(targetPosition)) {
+            System.out.println("Target position " + targetPosition + " is out of bounds.");
+            return false;
+        }
+    
+        // Fetch the current and target tiles
+        Tile currentTile = getTile(currentPosition.x, currentPosition.y);
+        Tile targetTile = getTile(targetPosition.x, targetPosition.y);
+    
+        if (currentTile == null || targetTile == null) {
+            System.out.println("One of the tiles is null.");
+            return false;
+        }
+    
+        // Map movement direction to connection terms
+        String normalizedDirection = mapDirection(direction);
+        String reverseDirection = getReverseDirection(normalizedDirection);
+    
+        // Debugging
+        System.out.println("Accessed Tile at (" + currentPosition.x + ", " + currentPosition.y + "): " +
+            "Type: " + currentTile.getType() + ", Connections: " + currentTile.getConnections());
+        System.out.println("Accessed Tile at (" + targetPosition.x + ", " + targetPosition.y + "): " +
+            "Type: " + targetTile.getType() + ", Connections: " + targetTile.getConnections());
+        System.out.println("Direction: " + normalizedDirection + ", Reverse Direction: " + reverseDirection);
+    
+        // Validate spatial alignment
+        boolean currentTileValid = currentTile.getConnections().contains(normalizedDirection);
+        boolean targetTileValid = targetTile.getConnections().contains(reverseDirection);
+    
+        System.out.println("Current Tile Valid: " + currentTileValid);
+        System.out.println("Target Tile Valid: " + targetTileValid);
+    
+        if (currentTileValid && targetTileValid) {
+            System.out.println("Move allowed!");
+            return true;
+        } else {
+            System.out.println("Move blocked. Connections do not align.");
+            return false;
+        }
+    }
+    
+    private String mapDirection(String direction) {
+        switch (direction.toLowerCase()) {
+            case "up": return "north";
+            case "down": return "south";
+            case "left": return "west";
+            case "right": return "east";
+            default: return null;
+        }
+    }
+    
+    
+    
+    private String getReverseDirection(String direction) {
+        if (direction == null) {
+            System.err.println("Error: Direction is null.");
+            return null; // Log and return early for debugging purposes
+        }
+    
+        switch (direction.toLowerCase()) {
+            case "north": return "south";
+            case "south": return "north";
+            case "east": return "west";
+            case "west": return "east";
+            default:
+                System.err.println("Error: Invalid direction - " + direction);
+                return null;
+        }
+    }
+    
+    
+    
+     
+
+
     
     
 }

@@ -2,6 +2,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
@@ -23,12 +26,17 @@ public class Tile {
         loadImage(); // Load the base image
     }
 
-    public Tile(String imagePath, int row, int col, boolean isMovable) {
-        this.type = "default";
+    public Tile(String type,String imagePath, int row, int col, boolean isMovable) {
+        this.type = type;
         this.baseImagePath = imagePath;
         this.rotation = 0;
         this.isMovable = isMovable;
         loadImage();
+    }
+
+    public Tile(String string, String imagePath, boolean b) {
+        loadImage();
+        //TODO Auto-generated constructor stub
     }
 
     // Load the base image
@@ -122,6 +130,14 @@ public class Tile {
         return rotation;
     }
 
+    public void setRotation(int rotation) {
+        this.rotation = rotation % 360;
+    }
+
+    public String getType() {
+        return type;
+    }
+
     public Image getImage() {
         return image;
     }
@@ -154,5 +170,15 @@ public class Tile {
         return null; // Return null if the image cannot be loaded
     }
 }
+
+
+public List<String> getConnections() {
+    return GameUtils.getTileConnections().getOrDefault(type, new ArrayList<>());
+}
+
+
+
+   
+
 
 }

@@ -20,19 +20,40 @@ import javax.swing.JPanel;
         }
 
         public void handleMovement(int playerIndex, String direction) {
-           
-            Player currentPlayer = gameBoard.getPlayers()[playerIndex]; // Get current player
-            Point oldPosition = currentPlayer.getPosition();
+            System.out.println("Handling movement for Player " + playerIndex + " in direction: " + direction);
         
-            if (gameBoard.movePlayer(currentPlayer, direction)) { // If the move is valid
-                Point newPosition = currentPlayer.getPosition();
-                view.collectTokenIfPresent(playerIndex, newPosition); // Check for token collection
-                view.updatePlayerPosition(playerIndex, newPosition); // Update player's position on the grid
+            Player currentPlayer = gameBoard.getPlayers()[playerIndex];
+            Point oldPosition = currentPlayer.getPosition();
+            Point newPosition = new Point(oldPosition);
+        
+            // Update position based on direction
+            switch (direction.toLowerCase()) {
+                case "up": newPosition.translate(-1, 0); break;
+                case "down": newPosition.translate(1, 0); break;
+                case "left": newPosition.translate(0, -1); break;
+                case "right": newPosition.translate(0, 1); break;
+            }
+        
+            System.out.println("Attempting to move to: " + newPosition);
+        
+            // Validate new position
+            if (gameBoard.isValidPosition(newPosition) &&
+                gameBoard.canMove(currentPlayer, direction) &&
+                !gameBoard.isTileOccupied(newPosition)) {
+        
+                currentPlayer.setPosition(newPosition);
+                view.updatePlayerPosition(playerIndex, newPosition);
+        
+                // Check for tokens
+                view.collectTokenIfPresent(playerIndex, newPosition);
+        
+                System.out.println("Player moved logically to: " + newPosition);
             } else {
-                System.out.println("Invalid move for Player " + (playerIndex + 1));
-                view.showInvalidMoveDialog(); // Optional: show an invalid move dialog
+                System.out.println("Invalid move: Tile occupied, out of bounds, or connections invalid");
+                view.showInvalidMoveDialog();
             }
         }
+        
         
 
 
@@ -83,13 +104,5 @@ import javax.swing.JPanel;
             return null; // Invalid border cell
         }
 
-       
-        
-        
-        
-        
-        
-        
-
-        
+         
     }
