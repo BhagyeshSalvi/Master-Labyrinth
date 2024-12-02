@@ -159,10 +159,11 @@ public class MainGame {
         frame.requestFocusInWindow();
 
 
-        
+        updateTurnIndicator(0);
+        updateTurnLabel(0);
         // Setup key listeners
-    GameController controller = new GameController(gameBoard, this); // Pass game board and view
-    setupKeyListeners(frame, controller);
+    // GameController controller = new GameController(gameBoard, this); // Pass game board and view
+    setupKeyListeners(frame, gameController);
     }
 
 
@@ -487,42 +488,81 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
      * 
      * @return a JPanel representing the game area, displaying player names and star counts.
      */
+    private JLabel currentPlayerLabel; // To display the current player's turn
+
     private JPanel createGameAreaPanel() {
         JPanel gameAreaPanel = new JPanel();
-        gameAreaPanel.setLayout(new GridLayout(4, 1)); // Vertical layout for 4 players
+        gameAreaPanel.setLayout(new BorderLayout()); // Use BorderLayout to allow for a turn indicator at the top
         gameAreaPanel.setOpaque(false); // Make the background transparent if desired
-       
+        
+        // Create a panel for the turn indicator
+        JPanel turnIndicatorPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        turnIndicatorPanel.setOpaque(false); // Transparent background
+
+        currentPlayerLabel = new JLabel("Current Turn: Player 1"); // Initial label text
+        currentPlayerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        currentPlayerLabel.setForeground(Color.YELLOW); // Highlight the text
+        turnIndicatorPanel.add(currentPlayerLabel);
+
+        // Create the player panel with stars
+        JPanel playerInfoPanel = new JPanel();
+        playerInfoPanel.setLayout(new GridLayout(4, 1)); // Vertical layout for 4 players
+        playerInfoPanel.setOpaque(false);
+
         // Player names and star counts
         String[] playerNames = {"Player 1", "Player 2", "Player 3", "Player 4"};
-        int[] starCounts = {0, 5, 2, 4}; // Initial star counts for each player
+        int[] starCounts = {0, 0, 0, 0}; // Initial star counts for each player
         playerStarLabels = new JLabel[playerNames.length]; // Array to store star labels
-    
+
         for (int i = 0; i < playerNames.length; i++) {
             JPanel playerPanel = new JPanel(); // Panel for each player
-            playerPanel.setOpaque(false); // Make each player's panel transparent
+            playerPanel.setOpaque(false); // Transparent background
             playerPanel.setLayout(new FlowLayout(FlowLayout.LEFT)); // Aligns content to the left
-    
+
             JLabel nameLabel = new JLabel(playerNames[i]);
             nameLabel.setForeground(Color.WHITE); // Set text color to white
             nameLabel.setFont(new Font("Arial", Font.PLAIN, 24)); // Increase text size
-    
+
             // Create star labels
             JLabel starLabel = new JLabel(); // Initialize empty star label
             starLabel.setForeground(Color.LIGHT_GRAY); // Set star color to light gray
             starLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Set font size
             updateStars(starLabel, starCounts[i]); // Set initial stars
-    
+
             playerStarLabels[i] = starLabel; // Store reference to the star label
-    
+
             playerPanel.add(nameLabel); // Add player name to panel
             playerPanel.add(starLabel); // Add stars to panel
-    
-            gameAreaPanel.add(playerPanel); // Add player panel to game area panel
+
+            playerInfoPanel.add(playerPanel); // Add player panel to the overall panel
         }
-    
+
+        // Add the turn indicator and player info to the main panel
+        gameAreaPanel.add(turnIndicatorPanel, BorderLayout.NORTH); // Turn indicator at the top
+        gameAreaPanel.add(playerInfoPanel, BorderLayout.CENTER); // Player info in the center
+
         return gameAreaPanel; // Return the complete game area panel
     }
-    
+
+public void updateTurnLabel(int currentPlayerIndex) {
+    String playerName = "Player " + (currentPlayerIndex + 1);
+    currentPlayerLabel.setText("Current Turn: " + playerName);
+    System.out.println("Updated turn label to: " + playerName);
+}
+
+
+public void updateTurnIndicator(int currentPlayerIndex) {
+    for (int i = 0; i < playerStarLabels.length; i++) {
+        if (i == currentPlayerIndex) {
+            playerStarLabels[i].setForeground(Color.YELLOW); // Highlight the current player
+        } else {
+           // playerStarLabels[i].setForeground(Color.LIGHT_GRAY); // Dim others
+        }
+    }
+}
+
+
+
     private void updateStars(JLabel starLabel, int count) {
         StringBuilder stars = new StringBuilder();
         for (int j = 0; j < count; j++) {
@@ -637,9 +677,10 @@ private JPanel createInsertPanel(String initialImagePath) {
     if (currentInsertTile.getImagePath() == null || currentInsertTile.getImage() == null) {
         System.err.println("Error: InsertPanel Tile initialized with invalid image.");
     }
+
     // Create the InsertPanel
     JPanel insertPanel = new JPanel(new BorderLayout());
-    insertPanel.setPreferredSize(new Dimension(80, 120)); // Adjust panel size
+    insertPanel.setPreferredSize(new Dimension(80, 150)); // Adjust panel size to fit two buttons
     insertPanel.setOpaque(false);
 
     // Create JLabel to hold the tile image
@@ -653,6 +694,10 @@ private JPanel createInsertPanel(String initialImagePath) {
     // Add the JLabel to the center of the panel
     insertPanel.add(tileImageLabel, BorderLayout.CENTER);
     insertPanel.putClientProperty("currentTile", currentInsertTile);
+
+    // Create a panel to hold buttons (for better layout)
+    JPanel buttonPanel = new JPanel(new GridLayout(2, 1));
+    buttonPanel.setOpaque(false);
 
     // Add the Rotate button
     JButton rotateButton = new JButton("Rotate");
@@ -671,11 +716,28 @@ private JPanel createInsertPanel(String initialImagePath) {
         gridPanel.repaint();
         SwingUtilities.getWindowAncestor(gridPanel).requestFocusInWindow();
     });
-    insertPanel.add(rotateButton, BorderLayout.SOUTH);
+    buttonPanel.add(rotateButton);
 
-    rotateButton.setFocusable(false); // Prevent the button from stealing focus
-    // Store the Tile object and JLabel in the InsertPanel for later access
-    insertPanel.putClientProperty("tileImageLabel", tileImageLabel);
+    // Add the "End Turn" button
+    JButton endTurnButton = new JButton("End Turn");
+    endTurnButton.setPreferredSize(new Dimension(80, 35));
+    endTurnButton.setFont(new Font("Arial", Font.BOLD, 17));
+    endTurnButton.setForeground(Color.WHITE);
+    endTurnButton.setOpaque(false);
+    endTurnButton.setContentAreaFilled(false);
+    endTurnButton.setBorderPainted(false);
+    endTurnButton.addActionListener(e -> {
+        // Call the GameController to switch to the next player
+        gameController.nextTurn();
+    
+        
+        SwingUtilities.getWindowAncestor(gridPanel).requestFocusInWindow();
+    });
+    buttonPanel.add(endTurnButton);
+
+    // Add the button panel to the insert panel
+    insertPanel.add(buttonPanel, BorderLayout.SOUTH);
+
     return insertPanel;
 }
 
@@ -733,7 +795,7 @@ private JLayeredPane createGridWithPlayersAndTokens() {
 
     // Initialize tokens
     List<Point> tokenPositions = Arrays.asList(
-        new Point(2, 2), new Point(2, 3), new Point(2, 4), new Point(2, 5), new Point(2, 6),
+         new Point(2, 2), new Point(2, 3), new Point(2, 4), new Point(2, 5), new Point(2, 6),
         new Point(3, 6), new Point(4, 6), new Point(5, 6), new Point(6, 6),
         new Point(6, 5), new Point(6, 4), new Point(6, 3), new Point(6, 2),
         new Point(5, 2), new Point(4, 2), new Point(3, 2)
@@ -885,8 +947,10 @@ private void setupKeyListeners(JFrame frame, GameController controller) {
             }
 
             if (direction != null) {
+                int currentPlayerIndex = controller.getCurrentPlayerIndex();
+                System.out.println(currentPlayerIndex);
                 System.out.println("Key Pressed: " + direction);
-                controller.handleMovement(0, direction); // Player 0
+                controller.handleMovement(currentPlayerIndex, direction);
             }
         }
     });

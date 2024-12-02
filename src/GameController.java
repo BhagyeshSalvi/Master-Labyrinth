@@ -9,6 +9,8 @@ import javax.swing.JPanel;
     public class GameController {
         private GameBoard gameBoard;
         private MainGame view;
+        private int currentPlayerIndex=0; // Start with Player 1 (index 0)
+
 
         public GameController(GameBoard gameBoard, MainGame view) {
             this.gameBoard = gameBoard;
@@ -19,10 +21,31 @@ import javax.swing.JPanel;
             //TODO Auto-generated constructor stub
         }
 
-        public void handleMovement(int playerIndex, String direction) {
-            System.out.println("Handling movement for Player " + playerIndex + " in direction: " + direction);
+        public int getCurrentPlayerIndex() {
+           // System.out.println("Returning Current Player Index: " + currentPlayerIndex); // Debug log
+            return currentPlayerIndex;
+        }
         
-            Player currentPlayer = gameBoard.getPlayers()[playerIndex];
+
+
+        public void nextTurn() {
+            currentPlayerIndex = (currentPlayerIndex + 1) % gameBoard.getPlayers().length;
+            System.out.println("It's now Player " + (currentPlayerIndex + 1) + "'s turn.");
+            view.updateTurnLabel(currentPlayerIndex);
+            view.updateTurnIndicator(currentPlayerIndex);
+            
+        }
+        
+
+
+        public void handleMovement(int playerIndex, String direction) {
+            if (playerIndex != currentPlayerIndex) {
+                System.out.println("Invalid action: It's not Player " + (playerIndex + 1) + "'s turn!");
+                return; // Ignore movement if it's not this player's turn
+            }
+            System.out.println("Handling movement for Player " + (playerIndex+1) + " in direction: " + direction);
+        
+            Player currentPlayer = gameBoard.getPlayers()[getCurrentPlayerIndex()];
             Point oldPosition = currentPlayer.getPosition();
             Point newPosition = new Point(oldPosition);
         
@@ -48,6 +71,7 @@ import javax.swing.JPanel;
                 view.collectTokenIfPresent(playerIndex, newPosition);
         
                 System.out.println("Player moved logically to: " + newPosition);
+                
             } else {
                 System.out.println("Invalid move: Tile occupied, out of bounds, or connections invalid");
                 view.showInvalidMoveDialog();
@@ -87,11 +111,7 @@ import javax.swing.JPanel;
                     System.err.println("Invalid direction: " + direction);
             }
         
-            // // Debugging: Verify if the InsertPanel tile was updated correctly
-            // System.out.println("Updated InsertPanel Tile: " + currentInsertTile.getImagePath());
-        
-            // Update the grid display
-            // view.updateGrid(gameBoard);
+           
         }
         
 
