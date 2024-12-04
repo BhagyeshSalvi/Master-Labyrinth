@@ -29,6 +29,13 @@ public class GameBoard {
     
     }
 
+    public GameBoard(Tile[][] tiles, Player[] players) {
+        this.size = tiles.length;
+        this.players = players;
+        this.tiles = tiles;
+    }
+    
+
     
     
     private Map<Point, JLabel> tokenMap = new HashMap<>();
@@ -67,7 +74,8 @@ public class GameBoard {
                         tiles[row][col] = new Tile("placeholder", "Pictures/placeholder.png", row, col, true);
                     }
                 } else {
-                    tiles[row][col] = null;
+                    tiles[row][col] = new Tile("empty", "Pictures/placeholder.png", row, col, false);
+
                 }
     
                 // Debug log for each tile
@@ -115,8 +123,21 @@ public class GameBoard {
         return tiles[position.x][position.y];
     }
 
+    // Getters and Setters
+    public Tile[][] getTiles() {
+        return tiles; // Add this method to return the tiles for serialization
+    }
+
+    public void setTiles(Tile[][] tiles) {
+        this.tiles = tiles; // Add a setter for tiles for deserialization or synchronization
+    }
+
     public Player[] getPlayers() {
         return players;
+    }
+
+    public void setPlayers(Player[] players) {
+        this.players = players; // Setter for players
     }
 
 
@@ -474,6 +495,8 @@ public class GameBoard {
                 return null;
         }
     }
+
+    
     
     
     

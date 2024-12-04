@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "SerializationTest",
+            "request": "launch",
+            "mainClass": "SerializationTest",
+            "projectName": "Assignment1_2"
+        },
+        {
+            "type": "java",
             "name": "DebugFileRead",
             "request": "launch",
             "mainClass": "DebugFileRead",

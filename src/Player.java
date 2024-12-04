@@ -1,7 +1,9 @@
 import java.awt.Color;
 import java.awt.Point;
+import java.io.Serializable;
 
-public class Player {
+public class Player implements Serializable{
+    private static final long serialVersionUID = 1L; 
     private String name;
     private Point position;
     private int starsCollected;

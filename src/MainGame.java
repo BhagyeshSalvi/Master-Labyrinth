@@ -9,6 +9,7 @@ import javax.swing.border.LineBorder;
 
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,43 +30,147 @@ public class MainGame {
     private GameBoard gameBoard;
     private GameController gameController;
     private JPanel insertPanel; 
-    private JLayeredPane layeredPane; 
+    private JLayeredPane layeredPane;
+    private JPanel gameAreaPanel; 
     private JPanel gridPanel;    
     private Map<Point, JLabel> tokenMap = new HashMap<>(); // To track tokens by their grid position
-    private JLabel[] playerStarLabels;
+    private Map<Point, String> tokenData = new LinkedHashMap<>();
+    private JLabel[] playerStarLabels = new JLabel[4]; // Default to 4 players
     private Map<String, JLabel> magicalComponentLabels;
-
+    private NetworkManager networkManager;
+    private boolean isHost;
+    private int assignedPlayerIndex;
+    private Client client;
+    private JLabel starLabel;
     
-    
-    // Tile currentInsertTile = new Tile("default", new ImageIcon("Pictures/GridCell/hallway_vert.png").getImage());
-
-    public MainGame(){
-        Player[] players = {
-            new Player("Player 1", new Point(3, 3), Color.RED),
-            new Player("Player 2", new Point(3, 5), Color.BLUE),
-            new Player("Player 3", new Point(5, 3), Color.GREEN),
-            new Player("Player 4", new Point(5, 5), Color.YELLOW)
-        };
-        GameBoard gameBoard = new GameBoard(9, players);
-        this.gameController = new GameController(gameBoard); // Initialize GameController
         
-    }
+        
+        // Tile currentInsertTile = new Tile("default", new ImageIcon("Pictures/GridCell/hallway_vert.png").getImage());
     
+        public MainGame(boolean isHost, GameState gameState) {
+            this.isHost = isHost;
+            currentPlayerLabel = new JLabel("Initializing..."); // Initialize the label early
+            System.out.println("MainGame constructor called. isHost: " + isHost);
+        
+            if (isHost) {
+                System.out.println("Host detected. Initializing players and token data...");
+                populateTokenData(); // Ensure this is called for local play
+                Player[] players = {
+                    new Player("Player 1", new Point(3, 3), Color.RED),
+                    new Player("Player 2", new Point(3, 5), Color.BLUE),
+                    new Player("Player 3", new Point(5, 3), Color.GREEN),
+                    new Player("Player 4", new Point(5, 5), Color.YELLOW)
+                };
+        
+                this.gameBoard = new GameBoard(9, players);
+                this.gameController = new GameController(gameBoard, this);
+                this.assignedPlayerIndex = 0;
+            } else {
+                System.out.println("Client detected. Waiting for GameState...");
+                if (gameState != null) {
+                    initializeFromGameState(gameState);
+                    if (this.gameController == null) {
+                        this.gameController = new GameController(this.gameBoard, this);
+                        System.out.println("Client: GameController initialized.");
+                    }
+                   
+                } else {
+                    this.gameBoard = null; // Will be set later
+                    this.gameController = null; // Will be set later
+                }
+            }
+        }
+        
+        
+        // Helper method to initialize from GameState
+        private void initializeFromGameState(GameState gameState) {
+            this.gameBoard = new GameBoard(gameState.getTiles(), gameState.getPlayers());
+            this.gameController = new GameController(gameBoard, this);
+            this.gameController.setCurrentPlayerIndex(gameState.getCurrentPlayerIndex());
+            this.assignedPlayerIndex = gameState.getAssignedPlayerIndex();
+
+            Player[] players = gameState.getPlayers();
+            playerStarLabels = new JLabel[players.length];
+        
+            for (int i = 0; i < players.length; i++) {
+                playerStarLabels[i] = new JLabel();
+                updateStars(playerStarLabels[i], players[i].getStarsCollected());
+            }
+            updateTurnLabel(gameState.getCurrentPlayerIndex());
+            // updateTurnIndicator(gameState.getCurrentPlayerIndex())
+        
+            // Sync tokenData
+            tokenData.clear();
+            tokenData.putAll(gameState.getTokenData());
+        
+            // Populate `tokenMap` for rendering
+            this.tokenMap.clear();
+            for (Map.Entry<Point, String> entry : tokenData.entrySet()) {
+                Point position = entry.getKey();
+                String tokenPath = entry.getValue();
+                JLabel tokenLabel = createTokenLabel(tokenPath, 20);
+        
+                int x = (position.y + 1) * cellSize + (cellSize - 20) / 2;
+                int y = (position.x + 1) * cellSize + (cellSize - 20) / 2;
+                tokenLabel.setBounds(x, y, 20, 20);
+        
+                tokenMap.put(position, tokenLabel);
+            }
+        }
+        
+        
+        
+
     public MainGame(GameController gameController){
         this.gameController=gameController;
     }
 	
+    
 	
 	/**
 	 * This is main method calls createAndShow game which has all method calls
 	 * @param args
 	 */
     public static void main(String[] args) {
-        // Launch the game
         javax.swing.SwingUtilities.invokeLater(() -> {
-            new MainGame().createAndShowGame();
+            String[] options = {"Play Locally", "Host a Game", "Join a Game"};
+            int choice = JOptionPane.showOptionDialog(
+                null,
+                "Select an option to start the game:",
+                "Game Setup",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options,
+                options[0]
+            );
+    
+            MainGame game;
+            switch (choice) {
+                case 0: // Play Locally
+                    game = new MainGame(true, null);
+                    game.createAndShowGame(game);
+                    game.updateUI();
+                    break;
+    
+                case 1: // Host a Game
+                    game = new MainGame(true, null);
+                    game.hostGame();
+                    break;
+    
+                case 2: // Join a Game
+                    game = new MainGame(false, null);
+                    game.joinGame();
+                    break;
+    
+                default:
+                    System.exit(0); // Exit on cancel or close
+            }
         });
     }
+    
+    
+    
     
 
     
@@ -91,99 +196,101 @@ public class MainGame {
      * The frame is then packed to fit the components, centered on the screen, and made 
      * non-resizable. Finally, the frame is made visible.
      */
-    public void createAndShowGame() {
-
-        // Initialize players
-        Player[] players = {
-            new Player("Player 1", new Point(3, 3), Color.RED),
-            new Player("Player 2", new Point(3, 5), Color.BLUE),
-            new Player("Player 3", new Point(5, 3), Color.GREEN),
-            new Player("Player 4", new Point(5, 5), Color.YELLOW)
-        };
-
-        // Initialize the game board
-        gameBoard = new GameBoard(9, players);
-        this.gameController = new GameController(gameBoard,this);
-
-        
-        JFrame frame = createFrame();
-
+    public void createAndShowGame(MainGame mainGame) {
+        JFrame frame = mainGame.createFrame();
+    
         // Create a layered pane to hold background and grid
-        layeredPane = new JLayeredPane();
-        layeredPane.setPreferredSize(new Dimension(1280, 750)); // Set size of the game window
-
-        // Add background and grid panel
-        layeredPane.add(createBackgroundPanel(), Integer.valueOf(0));  // Background at layer 0
-       // layeredPane.add(createGridPanel(), Integer.valueOf(1));  // Grid on top at layer 1
-       JLayeredPane layeredGridWithPlayers = createGridWithPlayersAndTokens();
-       layeredPane.add(layeredGridWithPlayers, Integer.valueOf(1)); // Add the grid with players
-
-
-        JPanel chatPanel = createChatPanel();
-        chatPanel.setBounds(970, 490, 300, 250);  // Positioning the chat panel in the bottom-right corner
-        layeredPane.add(chatPanel, Integer.valueOf(2));  // Chatbox on top at layer 2
-
-       
-        // Create and add the logo panel
-        JPanel logoPanel = createLogoPanel();
-        logoPanel.setBounds(0, 0, 1280, 100);  // Position the logo at the top of the screen
-        layeredPane.add(logoPanel, Integer.valueOf(3));  // Logo on top at layer 3
-
-            // Add magical components panel
-        JPanel magicalComponentsPanel = createMagicalComponentsPanel();
+        mainGame.layeredPane = new JLayeredPane();
+        mainGame.layeredPane.setPreferredSize(new Dimension(1280, 750)); // Set size of the game window
+    
+        // Add background panel
+        mainGame.layeredPane.add(mainGame.createBackgroundPanel(), Integer.valueOf(0)); // Background at layer 0
+    
+        // Add grid with players and tokens
+        JLayeredPane layeredGridWithPlayers = mainGame.createGridWithPlayersAndTokens();
+        mainGame.layeredPane.add(layeredGridWithPlayers, Integer.valueOf(1)); // Add the grid with players
+    
+        // Add chat panel
+        JPanel chatPanel = mainGame.createChatPanel();
+        chatPanel.setBounds(970, 490, 300, 250); // Positioning the chat panel in the bottom-right corner
+        mainGame.layeredPane.add(chatPanel, Integer.valueOf(2)); // Chatbox on top at layer 2
+    
+        // Add logo panel
+        JPanel logoPanel = mainGame.createLogoPanel();
+        logoPanel.setBounds(0, 0, 1280, 100); // Position the logo at the top of the screen
+        mainGame.layeredPane.add(logoPanel, Integer.valueOf(3)); // Logo on top at layer 3
+    
+        // Add magical components panel
+        JPanel magicalComponentsPanel = mainGame.createMagicalComponentsPanel();
         magicalComponentsPanel.setBounds(970, 300, 300, 150); // Position between chatPanel and gameAreaPanel
-        layeredPane.add(magicalComponentsPanel, Integer.valueOf(3));
-        
-        // Create and add the game area panel
-        JPanel gameAreaPanel = createGameAreaPanel();
-        gameAreaPanel.setBounds(970, 50, 300, 200);
-        layeredPane.add(gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
-
-        // Create and add the insert panel
-        // Create the Tile object for the insert panel
-        String initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Initial image path for the InsertPanel
-        insertPanel = createInsertPanel(initialImagePath);
-        insertPanel.setBounds(640, 450, 200, 150);
-        layeredPane.add(insertPanel, Integer.valueOf(3));  // Insert panel above the game area
-
-        JMenuBar menubar = createMenuBar();
+        mainGame.layeredPane.add(magicalComponentsPanel, Integer.valueOf(3));
+    
+        // Add game area panel
+        mainGame.gameAreaPanel = mainGame.createGameAreaPanel();
+        mainGame.gameAreaPanel.setBounds(970, 50, 300, 200); // Positioning game area panel
+        mainGame.layeredPane.add(mainGame.gameAreaPanel, Integer.valueOf(3)); // Add game area at layer 3
+    
+        // Add insert panel
+        String initialImagePath = "Pictures/GridCell/hallway_horiz.png"; // Initial image for insert panel
+        mainGame.insertPanel = mainGame.createInsertPanel(initialImagePath);
+        mainGame.insertPanel.setBounds(640, 450, 200, 150); // Position insert panel
+        mainGame.layeredPane.add(mainGame.insertPanel, Integer.valueOf(3)); // Insert panel above game area
+    
+        // if (mainGame.isHost) {
+        //     mainGame.initializeTokens(); // Ensure tokens are initialized when playing locally
+        // }
+        // Set up menu bar
+        JMenuBar menubar = mainGame.createMenuBar();
         frame.setJMenuBar(menubar);
-
+    
         // Add the layered pane to the frame and display
-        frame.add(layeredPane);
+        frame.add(mainGame.layeredPane);
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
         frame.setVisible(true);
         frame.setFocusable(true);
         frame.requestFocusInWindow();
-
-
-        updateTurnIndicator(0);
-        updateTurnLabel(0);
+    
+        // Update turn indicators if hosting or playing locally
+       
+    
         // Setup key listeners
-    // GameController controller = new GameController(gameBoard, this); // Pass game board and view
-    setupKeyListeners(frame, gameController);
+        mainGame.setupKeyListeners(frame, mainGame.gameController,this);
     }
-
-
+    
     
 
     public void setController(GameController controller) {
         this.gameController = controller;
     }
     
-    
     public JPanel getGridPanel() {
         return gridPanel;
     }
-    
-    
-    
-    
-    
 
-   
+    public boolean isHost() {
+        return this.isHost;
+    }
+    
+    public int getAssignedPlayerIndex() {
+        return this.assignedPlayerIndex;
+    }
+    
+    public Map<Point, JLabel> getTokenMap() {
+        return tokenMap;
+    }
+
+    public NetworkManager getNetworkManager(){
+        return this.networkManager;
+    }
+
+    public Map<Point, String> getTokenData(){
+        return this.tokenData;
+    }
+
+    
+    
 
     /**
      * Creates the main game frame for the Labyrinth game.
@@ -331,43 +438,41 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
      */
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-
-        // Create the File menu and its items
+    
+        // File Menu
         JMenu fileMenu = new JMenu("File");
         fileMenu.add(new JMenuItem("New"));
         fileMenu.add(new JMenuItem("Open"));
         fileMenu.add(new JMenuItem("Save"));
-        fileMenu.addSeparator();  // Adds a separator laine
+        fileMenu.addSeparator();  // Adds a separator line
         fileMenu.add(new JMenuItem("Exit"));
-
-        // Create the Game menu and its items
+    
+        // Game Menu
         JMenu gameMenu = new JMenu("Game");
+    
         gameMenu.add(new JMenuItem("Start Game"));
         gameMenu.add(new JMenuItem("Pause"));
         gameMenu.add(new JMenuItem("Undo Move"));
         gameMenu.add(new JMenuItem("End Game"));
-
-        // Create the Help menu and its items
+    
+        // Help Menu
         JMenu helpMenu = new JMenu("Help");
         helpMenu.add(new JMenuItem("Learn"));
         helpMenu.add(new JMenuItem("About"));
-
+    
         // Add the menus to the menu bar
         menuBar.add(fileMenu);
         menuBar.add(gameMenu);
         menuBar.add(helpMenu);
-
+    
         // Add Change Language menu at the end
         JMenu changeLanguageMenu = new JMenu("Change Language");
-
         menuBar.add(Box.createHorizontalGlue()); // Push "Change Language" to the right
         menuBar.add(changeLanguageMenu);
     
-
-
         return menuBar;
     }
-
+    
 
     /**
      * Creates the chat panel for the game interface.
@@ -478,6 +583,9 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         return logoPanel;
     }
 
+    //Method to create player names
+    
+
     /**
      * Creates the game area panel that displays player information.
      *
@@ -524,7 +632,7 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
             nameLabel.setFont(new Font("Arial", Font.PLAIN, 24)); // Increase text size
 
             // Create star labels
-            JLabel starLabel = new JLabel(); // Initialize empty star label
+            starLabel = new JLabel(); // Initialize empty star label
             starLabel.setForeground(Color.LIGHT_GRAY); // Set star color to light gray
             starLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Set font size
             updateStars(starLabel, starCounts[i]); // Set initial stars
@@ -544,11 +652,11 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         return gameAreaPanel; // Return the complete game area panel
     }
 
-public void updateTurnLabel(int currentPlayerIndex) {
-    String playerName = "Player " + (currentPlayerIndex + 1);
-    currentPlayerLabel.setText("Current Turn: " + playerName);
-    System.out.println("Updated turn label to: " + playerName);
-}
+    public void updateTurnLabel(int currentPlayerIndex) {
+        currentPlayerLabel.setText("Player " + (currentPlayerIndex + 1) + "'s Turn");
+        System.out.println("Updated turn label to: Player " + (currentPlayerIndex + 1));
+    }
+    
 
 
 public void updateTurnIndicator(int currentPlayerIndex) {
@@ -580,7 +688,7 @@ public void updateTurnIndicator(int currentPlayerIndex) {
             return;
         }
     
-        JLabel starLabel = playerStarLabels[playerIndex]; // Get the star label for the player
+        starLabel = playerStarLabels[playerIndex]; // Get the star label for the player
         StringBuilder stars = new StringBuilder();
         for (int i = 0; i < newStarCount; i++) {
             stars.append("\u2605 "); // Add stars dynamically
@@ -760,6 +868,30 @@ private static final Point[] PLAYER_START_POSITIONS = {
     new Point(6, 6)  // Player 4 starts at (row 6, column 6)
 };
 
+private void populateTokenData() {
+    System.out.println("Populating token data...");
+    tokenData.clear();
+
+    List<Point> tokenPositions = Arrays.asList(
+        new Point(2, 2), new Point(2, 3), new Point(2, 4), new Point(2, 5), new Point(2, 6),
+        new Point(3, 6), new Point(4, 6), new Point(5, 6), new Point(6, 6),
+        new Point(6, 5), new Point(6, 4), new Point(6, 3), new Point(6, 2),
+        new Point(5, 2), new Point(4, 2), new Point(3, 2)
+    );
+
+    List<Map.Entry<String, Boolean>> shuffledTokens = new ArrayList<>(GameUtils.generateTokenPaths().entrySet());
+    Collections.shuffle(shuffledTokens);
+
+    for (int i = 0; i < tokenPositions.size(); i++) {
+        Point position = tokenPositions.get(i);
+        String tokenPath = shuffledTokens.get(i).getKey();
+        tokenData.put(position, tokenPath);
+    }
+
+    System.out.println("Token data populated: " + tokenData);
+}
+
+
 private JLabel[] playerLabels; // Array to store player JLabels
 private static final int cellSize = 60; // Size of a grid cell
 private static final int playerSize = 25; // Size of a player label
@@ -775,49 +907,38 @@ private JLayeredPane createGridWithPlayersAndTokens() {
     gridPanel.setBounds(0, 0, 650, 650);
     layeredGridPane.add(gridPanel, Integer.valueOf(0));
 
+    System.out.println("Initialzing player");
     Player[] players = gameBoard.getPlayers();
     playerLabels = new JLabel[players.length];
 
-    // Initialize players
     for (int i = 0; i < players.length; i++) {
-        Point position = players[i].getPosition(); // Use GameBoard's logical position
+        Point position = players[i].getPosition();
         JLabel playerLabel = createPlayerLabel(i + 1, playerSize);
 
-        int x = (position.y + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
-        int y = (position.x + 1) * cellSize + (cellSize - playerSize) / 2; // Offset by +1
-        
+        int x = (position.y + 1) * cellSize + (cellSize - playerSize) / 2;
+        int y = (position.x + 1) * cellSize + (cellSize - playerSize) / 2;
         playerLabel.setBounds(x, y, playerSize, playerSize);
 
-        System.out.println("Player " + (i + 1) + " initialized at: " + position + " (x: " + x + ", y: " + y + ")");
-        layeredGridPane.add(playerLabel, Integer.valueOf(2)); // Place players on a higher layer
+        layeredGridPane.add(playerLabel, Integer.valueOf(2));
         playerLabels[i] = playerLabel;
     }
 
-    // Initialize tokens
-    List<Point> tokenPositions = Arrays.asList(
-         new Point(2, 2), new Point(2, 3), new Point(2, 4), new Point(2, 5), new Point(2, 6),
-        new Point(3, 6), new Point(4, 6), new Point(5, 6), new Point(6, 6),
-        new Point(6, 5), new Point(6, 4), new Point(6, 3), new Point(6, 2),
-        new Point(5, 2), new Point(4, 2), new Point(3, 2)
-    );
-    Map<String, Boolean> tokenPaths = GameUtils.generateTokenPaths();
-    List<Map.Entry<String, Boolean>> tokenList = new ArrayList<>(tokenPaths.entrySet());
-    Collections.shuffle(tokenList);
+    System.out.println("Initializing tokens...");
+    System.out.println("Token data: " + tokenData);
 
-    int tokenSize = 20;
-    for (int i = 0; i < tokenPositions.size(); i++) {
-        Point logicalPosition = tokenPositions.get(i);
-        Map.Entry<String, Boolean> tokenEntry = tokenList.get(i);
+    for (Map.Entry<Point, String> entry : tokenData.entrySet()) {
+        Point position = entry.getKey();
+        String tokenPath = entry.getValue();
 
-        JLabel tokenLabel = createTokenLabel(tokenEntry.getKey(), tokenSize);
-       // Apply offset to map logical position (0-based) to visual position (1-based)
-    int x = (logicalPosition.y + 1) * cellSize + (cellSize - tokenSize) / 2;
-    int y = (logicalPosition.x + 1) * cellSize + (cellSize - tokenSize) / 2;
-        tokenLabel.setBounds(x, y, tokenSize, tokenSize);
+        JLabel tokenLabel = createTokenLabel(tokenPath, 20);
 
-        System.out.println("Token added at logical position: " + logicalPosition + " (x: " + x + ", y: " + y + ")");
-        layeredGridPane.add(tokenLabel, Integer.valueOf(1)); // Tokens on a lower layer
-        tokenMap.put(logicalPosition, tokenLabel);
+        int x = (position.y + 1) * cellSize + (cellSize - 20) / 2;
+        int y = (position.x + 1) * cellSize + (cellSize - 20) / 2;
+        tokenLabel.setBounds(x, y, 20, 20);
+
+        System.out.println("Adding token at " + position + " with path " + tokenPath + " -> Pixel (" + x + ", " + y + ")");
+        layeredGridPane.add(tokenLabel, Integer.valueOf(1));
+        tokenMap.put(position, tokenLabel);
     }
 
     return layeredGridPane;
@@ -927,37 +1048,70 @@ public void updatePlayerPosition(int playerIndex, Point newPosition) {
     System.out.println("Player label updated to pixel position: (x: " + x + ", y: " + y + ")");
 }
 
+public boolean canHostAct(int assignedPlayerIndex, int currentPlayerIndex, boolean isHost) {
+    if (isHost) {
+        // Host can only act as Player 1 (assignedPlayerIndex == 0)
+        if (assignedPlayerIndex != 0) {
+            System.out.println("Host cannot act as Player " + (currentPlayerIndex + 1));
+            return false;
+        }
+    } else {
+        // In host-client, validate `assignedPlayerIndex`
+        if (assignedPlayerIndex != currentPlayerIndex) {
+            System.out.println("Invalid action: It's not your turn!");
+            return false;
+        }
+    }
+    return true; // Player can act
+}
+
 
 
 private boolean isKeyListenerAdded = false;
+private Player[] players;
 
-private void setupKeyListeners(JFrame frame, GameController controller) {
+private void setupKeyListeners(JFrame frame, GameController controller, MainGame mainGame) {
     if (isKeyListenerAdded) return; // Avoid adding the listener multiple times
     isKeyListenerAdded = true;
 
     frame.addKeyListener(new KeyAdapter() {
         @Override
         public void keyPressed(KeyEvent e) {
-            String direction = null;
-            switch (e.getKeyCode()) {
-                case KeyEvent.VK_UP: direction = "up"; break;
-                case KeyEvent.VK_DOWN: direction = "down"; break;
-                case KeyEvent.VK_LEFT: direction = "left"; break;
-                case KeyEvent.VK_RIGHT: direction = "right"; break;
-            }
+            String direction = switch (e.getKeyCode()) {
+                case KeyEvent.VK_UP -> "up";
+                case KeyEvent.VK_DOWN -> "down";
+                case KeyEvent.VK_LEFT -> "left";
+                case KeyEvent.VK_RIGHT -> "right";
+                default -> null;
+            };
 
             if (direction != null) {
                 int currentPlayerIndex = controller.getCurrentPlayerIndex();
-                System.out.println(currentPlayerIndex);
-                System.out.println("Key Pressed: " + direction);
-                controller.handleMovement(currentPlayerIndex, direction);
+                int assignedPlayerIndex = mainGame.getAssignedPlayerIndex();
+                boolean isHost = mainGame.isHost();
+
+                System.out.println("Key pressed. Current Player Index: " + currentPlayerIndex +
+                                   ", Assigned Player Index: " + assignedPlayerIndex);
+
+                if (!isHost) {
+                    // Client sends the move to the host
+                    mainGame.getNetworkManager().getClient().sendPlayerMove(assignedPlayerIndex, direction);
+                } else if (assignedPlayerIndex == currentPlayerIndex) {
+                    // Host processes its own move
+                    try {
+                        controller.handleMovement(currentPlayerIndex, direction);
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    System.out.println("Invalid move: Not this player's turn.");
+                }
             }
         }
     });
 
     System.out.println("Key Listener Attached");
 }
-
 
 
 //dialog box to show invalid move
@@ -978,7 +1132,131 @@ public JPanel getInsertPanel() {
     return insertPanel;
 }
 
+//Adding networking
 
+public void hostGame() {
+    String port = JOptionPane.showInputDialog(null, "Enter port to host the game:", "Host Game", JOptionPane.PLAIN_MESSAGE);
+    if (port != null && !port.isEmpty()) {
+        try {
+            int portNumber = Integer.parseInt(port);
+
+            populateTokenData(); // Ensure consistent token data initialization
+
+            GameState initialState = new GameState(
+                gameBoard.getTiles(),
+                gameBoard.getPlayers(),
+                gameController.getCurrentPlayerIndex(),
+                tokenData,
+                assignedPlayerIndex
+            );
+
+            Host host = new Host(portNumber,gameController,gameBoard,this);
+            host.startServer(initialState);
+
+            networkManager = new NetworkManager(host, null);
+
+            JOptionPane.showMessageDialog(null, "Hosting game on port: " + port, "Host Game", JOptionPane.INFORMATION_MESSAGE);
+
+            createAndShowGame(this);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "Error starting host: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } else {
+        JOptionPane.showMessageDialog(null, "Port is required to host a game!", "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+public void joinGame() {
+    JTextField ipField = new JTextField();
+    JTextField portField = new JTextField();
+
+    Object[] fields = {
+        "Enter Host IP:", ipField,
+        "Enter Host Port:", portField
+    };
+
+    int result = JOptionPane.showConfirmDialog(null, fields, "Join Game", JOptionPane.OK_CANCEL_OPTION);
+    if (result == JOptionPane.OK_OPTION) {
+        String ip = ipField.getText().trim();
+        String port = portField.getText().trim();
+
+        if (!ip.isEmpty() && !port.isEmpty()) {
+            try {
+                int portNumber = Integer.parseInt(port);
+
+                Client client = new Client(ip, portNumber);
+
+                // Receive GameState from the host
+                GameState gameState = client.receiveGameState();
+                if (gameState == null) {
+                    throw new IOException("Failed to receive game state from host.");
+                }
+
+                // Initialize the MainGame with the received GameState
+                MainGame joinedGame = new MainGame(false, gameState);
+
+                // Pass the initialized GameController to the client
+                client.listenForUpdates(joinedGame.gameController);
+
+                // Set up NetworkManager
+                networkManager = new NetworkManager(null, client);
+                joinedGame.networkManager = networkManager;
+
+                // Launch the client's game
+                joinedGame.createAndShowGame(joinedGame);
+
+                JOptionPane.showMessageDialog(null, "Connected to host: " + ip + ":" + port, "Join Game", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Failed to join game: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "Host IP and Port are required to join a game!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}
+
+
+
+
+
+public void syncState(GameState state) {
+    if (state != null) {
+        gameBoard.setTiles(state.getTiles()); // Update the board tiles
+        gameBoard.setPlayers(state.getPlayers()); // Update the players
+        gameController.setCurrentPlayerIndex(state.getCurrentPlayerIndex()); // Update the current player index
+
+        // Update tokens if necessary
+        tokenData.clear();
+        tokenData.putAll(state.getTokenData());
+        // initializeTokens();
+
+        // Update the UI
+        updateUI();
+
+        System.out.println("Client: Synchronized GameState. Current turn: Player " + (state.getCurrentPlayerIndex() + 1));
+    }
+}
+
+
+
+
+
+public void updateUI() {
+    // Update the game area panel to reflect the current state
+    gameAreaPanel.removeAll();
+    gameAreaPanel.add(createGameAreaPanel()); // Recreate the game area panel
+    gameAreaPanel.revalidate();
+    gameAreaPanel.repaint();
+
+    // Update the grid or other components if necessary
+    gridPanel.revalidate();
+    gridPanel.repaint();
+
+    // Update the current player indicator
+    updateTurnIndicator(gameController.getCurrentPlayerIndex());
+    updateTurnLabel(gameController.getCurrentPlayerIndex());
+}
 
 
 

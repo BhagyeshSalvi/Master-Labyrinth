@@ -1,42 +1,44 @@
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.List;
-
 import javax.imageio.ImageIO;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 
-public class Tile {
+public class Tile implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String type; // Type of the tile (e.g., straight, corner, T-junction)
     private int rotation; // Current rotation angle (0, 90, 180, 270)
     private boolean isMovable; // Whether the tile can be moved
     private String baseImagePath; // Base image path (unrotated)
-    private Image image; // Current image (rotated or base)
-    private ImageIcon imageIcon; // Current icon for UI representation
+    private int row; // Grid row position
+    private int col; // Grid column position
 
+    private transient Image image; // Mark non-serializable fields as transient
+    private transient ImageIcon imageIcon; // For UI representation
+
+    // Constructor for default initialization
     public Tile(String type, String imagePath) {
         this.type = type;
         this.baseImagePath = imagePath;
-        this.rotation = 0; // Default rotation is 0
-        this.isMovable = true; // Default to movable
+        this.rotation = 0; // Default rotation
+        this.isMovable = true; // Default movable
+        this.row = -1; // Undefined grid position
+        this.col = -1;
         loadImage(); // Load the base image
     }
 
-    public Tile(String type,String imagePath, int row, int col, boolean isMovable) {
+    // Constructor for grid-based initialization
+    public Tile(String type, String imagePath, int row, int col, boolean isMovable) {
         this.type = type;
         this.baseImagePath = imagePath;
-        this.rotation = 0;
+        this.rotation = 0; // Default rotation
         this.isMovable = isMovable;
+        this.row = row; // Grid row position
+        this.col = col; // Grid column position
         loadImage();
-    }
-
-    public Tile(String string, String imagePath, boolean b) {
-        loadImage();
-        //TODO Auto-generated constructor stub
     }
 
     // Load the base image
@@ -57,18 +59,15 @@ public class Tile {
 
     // Rotate the tile clockwise
     public void rotateClockwise() {
-        rotation = (rotation + 90) % 360; // Increment rotation angle
+        rotation = (rotation + 90) % 360;
         image = rotateImage(image, 90); // Rotate the image dynamically
 
-        // Update the ImageIcon for UI
         if (image != null) {
             imageIcon = new ImageIcon(image.getScaledInstance(60, 60, Image.SCALE_SMOOTH));
-        } else {
-            System.err.println("Error: Unable to rotate image.");
         }
     }
 
-    // Rotate the image dynamically
+    // Dynamically rotate the image
     private Image rotateImage(Image img, int angle) {
         if (img == null) {
             System.err.println("Error: Image is null, cannot rotate.");
@@ -104,16 +103,24 @@ public class Tile {
     
         return rotatedImage;
     }
-    
 
-    // Reload the base image and apply the current rotation
+    // Reload the image and apply the current rotation
     public void reloadImage() {
         loadImage(); // Reload the base image
         for (int i = 0; i < rotation / 90; i++) {
-            image = rotateImage(image, 90); // Reapply rotation
+            image = rotateImage(image, 90);
         }
         if (image != null) {
             imageIcon = new ImageIcon(image.getScaledInstance(60, 60, Image.SCALE_SMOOTH));
+        }
+    }
+
+    // Serialization support: reinitialize transient fields after deserialization
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject(); // Deserialize non-transient fields
+        loadImage(); // Reload the base image
+        for (int i = 0; i < rotation / 90; i++) {
+            image = rotateImage(image, 90);
         }
     }
 
@@ -146,39 +153,32 @@ public class Tile {
         return isMovable;
     }
 
-    public static Icon createGrayscaleIcon(String imagePath, int width, int height) {
-    try {
-        // Load the original image
-        BufferedImage original = ImageIO.read(new File(imagePath));
-        BufferedImage grayscale = new BufferedImage(
-            original.getWidth(),
-            original.getHeight(),
-            BufferedImage.TYPE_BYTE_GRAY
-        );
-
-        // Draw the original image onto the grayscale image
-        Graphics g = grayscale.getGraphics();
-        g.drawImage(original, 0, 0, null);
-        g.dispose();
-
-        // Resize the image to fit the JLabel if necessary
-        Image scaledImage = grayscale.getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaledImage);
-
-    } catch (IOException e) {
-        e.printStackTrace();
-        return null; // Return null if the image cannot be loaded
+    public int getRow() {
+        return row;
     }
-}
 
+    public int getCol() {
+        return col;
+    }
 
-public List<String> getConnections() {
-    return GameUtils.getTileConnections().getOrDefault(type, new ArrayList<>());
-}
+    public List<String> getConnections() {
+        return GameUtils.getTileConnections().getOrDefault(type, new ArrayList<>());
+    }
 
+    public static ImageIcon createGrayscaleIcon(String imagePath, int width, int height) {
+        try {
+            BufferedImage original = ImageIO.read(new File(imagePath));
+            BufferedImage grayscale = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
 
+            Graphics g = grayscale.getGraphics();
+            g.drawImage(original, 0, 0, null);
+            g.dispose();
 
-   
-
-
+            Image scaledImage = grayscale.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+            return new ImageIcon(scaledImage);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }
