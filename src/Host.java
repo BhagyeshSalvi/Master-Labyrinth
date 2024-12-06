@@ -124,34 +124,37 @@ public class Host {
                             String[] parts = msg.split(":");
                             int playerIndex = Integer.parseInt(parts[1]);
                             String direction = parts[2];
-    
+        
                             System.out.println("Host: Received move from Player " + (playerIndex + 1) +
                                                " in direction: " + direction);
-    
-                            // Process the move and update the game state
-                            Player player = gameBoard.getPlayers()[playerIndex];
-                            Point oldPosition = player.getPosition();
+        
+                            // Validate turn
+                            if (playerIndex != gameController.getCurrentPlayerIndex()) {
+                                System.out.println("Invalid move: Player " + (playerIndex + 1) + " attempted to move out of turn!");
+                                continue; // Ignore the move
+                            }
+        
+                            // Process the move and check for token collection
+                            Point oldPosition = gameBoard.getPlayers()[playerIndex].getPosition();
                             Point newPosition = new Point(oldPosition);
-    
                             switch (direction.toLowerCase()) {
                                 case "up" -> newPosition.translate(-1, 0);
                                 case "down" -> newPosition.translate(1, 0);
                                 case "left" -> newPosition.translate(0, -1);
                                 case "right" -> newPosition.translate(0, 1);
                             }
-    
+        
                             if (gameBoard.isValidPosition(newPosition) &&
-                                gameBoard.canMove(player, direction) &&
+                                gameBoard.canMove(gameBoard.getPlayers()[playerIndex], direction) &&
                                 !gameBoard.isTileOccupied(newPosition)) {
-    
-                                player.setPosition(newPosition);
-    
-                                // Update the host's UI
+        
+                                gameBoard.getPlayers()[playerIndex].setPosition(newPosition);
                                 view.updatePlayerPosition(playerIndex, newPosition);
-                                System.out.println("Host: Updated position for Player " + (playerIndex + 1) +
-                                                   " to: " + newPosition);
-    
-                                // Broadcast the updated game state to all clients
+        
+                                // Check for token collection
+                                view.collectTokenIfPresent(playerIndex, newPosition);
+        
+                                // Broadcast updated game state
                                 GameState updatedState = new GameState(
                                     gameBoard.getTiles(),
                                     gameBoard.getPlayers(),
@@ -160,6 +163,7 @@ public class Host {
                                     view.getAssignedPlayerIndex()
                                 );
                                 view.getNetworkManager().broadcastGameState(updatedState);
+                                System.out.println("Host: Broadcasting updated game state after move by Player " + (playerIndex + 1));
                             } else {
                                 System.out.println("Host: Invalid move received from Player " + (playerIndex + 1));
                             }
@@ -170,6 +174,8 @@ public class Host {
                 System.err.println("Host: Client disconnected - " + clientSocket.getInetAddress());
             }
         }
+        
+
     }
     
 }

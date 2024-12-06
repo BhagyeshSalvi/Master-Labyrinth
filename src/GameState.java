@@ -1,5 +1,6 @@
 import java.awt.Point;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 public class GameState implements Serializable {
@@ -15,7 +16,7 @@ public class GameState implements Serializable {
         this.tiles = tiles;
         this.players = players;
         this.currentPlayerIndex = currentPlayerIndex;
-        this.tokenData = tokenData;
+        this.tokenData = new HashMap<>(tokenData); 
         this.assignedPlayerIndex = assignedPlayerIndex;
     }
 

@@ -1,11 +1,18 @@
-    import java.awt.Point;
+    import java.awt.Color;
+import java.awt.Font;
+import java.awt.Point;
 import java.io.IOException;
 import java.util.Map;
 
+import javax.swing.Icon;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+
+import java.util.Iterator;
+
 
     public class GameController {
         private GameBoard gameBoard;
@@ -64,6 +71,58 @@ import javax.swing.JPanel;
                     gameBoard.setPlayers(state.getPlayers());
                     currentPlayerIndex = state.getCurrentPlayerIndex();
                     System.out.println("GameController: GameState applied. Current Player Index: " + currentPlayerIndex);
+                    
+                    Map<Point, String> updatedTokenData = state.getTokenData();
+                    Map<Point, JLabel> currentTokenMap = view.getTokenMap(); // Access tokenMap
+                
+                    for (String tokenPath : GameUtils.generateTokenPaths().keySet()) {
+                    boolean isMagicCard = GameUtils.generateTokenPaths().getOrDefault(tokenPath, false);
+                         if (isMagicCard && !updatedTokenData.containsValue(tokenPath)) {
+                         JLabel magicalLabel = view.getMagicalComponentLabels().get(tokenPath);
+                         if (magicalLabel != null) {
+                       Icon grayscaleIcon = Tile.createGrayscaleIcon(tokenPath, 80, 80);
+
+                            if (grayscaleIcon != null) {
+                                magicalLabel.setIcon(grayscaleIcon);
+                            }
+                            magicalLabel.setText("Collected");
+                            magicalLabel.setHorizontalTextPosition(SwingConstants.CENTER);
+                            magicalLabel.setVerticalTextPosition(SwingConstants.CENTER);
+                            magicalLabel.setFont(new Font("Arial", Font.BOLD, 17));
+                            magicalLabel.setForeground(Color.black);
+                            magicalLabel.getParent().revalidate();
+                            magicalLabel.getParent().repaint();
+                            System.out.println("Client: Updated magic card to collected: " + tokenPath);
+                        }
+                    }
+    }
+
+                    // Use an iterator to remove collected tokens
+                    Iterator<Map.Entry<Point, JLabel>> iterator = currentTokenMap.entrySet().iterator();
+                    while (iterator.hasNext()) {
+                        Map.Entry<Point, JLabel> entry = iterator.next();
+                        Point position = entry.getKey();
+                        if (!updatedTokenData.containsKey(position)) {
+                            JLabel tokenLabel = entry.getValue();
+                            if (tokenLabel != null && view.getLayeredPane().isAncestorOf(tokenLabel)) {
+                                tokenLabel.getParent().remove(tokenLabel);
+                                System.out.println("Client: Removed token at " + position);
+                            }
+                            iterator.remove(); // Safely remove the token from the map
+                        }
+                    }
+                
+                    // Update tokenMap
+                    for (Map.Entry<Point, String> entry : updatedTokenData.entrySet()) {
+                        Point position = entry.getKey();
+                        if (!currentTokenMap.containsKey(position)) {
+                            String tokenPath = entry.getValue();
+                            JLabel tokenLabel = view.createTokenLabel(tokenPath, 20); // Create token UI
+                            currentTokenMap.put(position, tokenLabel);
+                            System.out.println("Client: Added token at " + position);
+                        }
+                    }
+                
                 
                     Player[] players = state.getPlayers();
                     for (int i = 0; i < players.length; i++) {
@@ -77,6 +136,8 @@ import javax.swing.JPanel;
                     // Notify the view to update UI
                     view.updateTurnLabel(currentPlayerIndex);
                     view.updateTurnIndicator(currentPlayerIndex);
+                    view.getLayeredPane().revalidate();
+                    view.getLayeredPane().repaint();
                 
                     // Enable/disable movement based on the current turn
                     if (view.getAssignedPlayerIndex() == currentPlayerIndex) {
@@ -128,7 +189,7 @@ import javax.swing.JPanel;
                         System.out.println("Player " + (playerIndex + 1) + " moved logically to: " + newPosition);
                 
                         // Notify host in host-client mode
-                        if (view.isHost()) {
+                        if (view.isHost() && view.getNetworkManager() != null) {
                             GameState updatedState = new GameState(
                                 gameBoard.getTiles(),
                                 gameBoard.getPlayers(),

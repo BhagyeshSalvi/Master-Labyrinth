@@ -42,6 +42,7 @@ public class MainGame {
     private int assignedPlayerIndex;
     private Client client;
     private JLabel starLabel;
+
     
         
         
@@ -281,13 +282,31 @@ public class MainGame {
         return tokenMap;
     }
 
+    public JLayeredPane getLayeredPane() {
+        return layeredPane; // Return the layeredPane for token management
+    }
     public NetworkManager getNetworkManager(){
         return this.networkManager;
     }
 
     public Map<Point, String> getTokenData(){
-        return this.tokenData;
+        Map<Point, String> tokenData = new HashMap<>();
+    for (Map.Entry<Point, JLabel> entry : tokenMap.entrySet()) {
+        String tokenPath = ((ImageIcon) entry.getValue().getIcon()).getDescription();
+        tokenData.put(entry.getKey(), tokenPath);
     }
+        return tokenData;
+    }
+
+    public int getCellSize(){
+        return cellSize;
+    }
+
+    public Map<String, JLabel> getMagicalComponentLabels() {
+        return magicalComponentLabels;
+    }
+    
+
 
     
     
@@ -755,6 +774,18 @@ public void updateTurnIndicator(int currentPlayerIndex) {
     
         layeredPane.revalidate();
         layeredPane.repaint();
+
+        if (this.isHost() && this.getNetworkManager() != null) {
+            GameState updatedState = new GameState(
+                gameBoard.getTiles(),
+                gameBoard.getPlayers(),
+                gameController.getCurrentPlayerIndex(),
+                this.getTokenData(),
+                this.getAssignedPlayerIndex()
+            );
+            this.getNetworkManager().broadcastGameState(updatedState);
+            System.out.println("Host: Broadcasting updated game state after token collection.");
+        }
     }
       
     
@@ -964,7 +995,7 @@ private JLabel createPlayerLabel(int playerNumber, int size) {
 
 
 
-private JLabel createTokenLabel(String tokenPath, int tokenSize) {
+public JLabel createTokenLabel(String tokenPath, int tokenSize) {
     ImageIcon tokenIcon = new ImageIcon(tokenPath);
     tokenIcon.setDescription(tokenPath); // Set the description to the token path
 
@@ -1093,18 +1124,21 @@ private void setupKeyListeners(JFrame frame, GameController controller, MainGame
                 System.out.println("Key pressed. Current Player Index: " + currentPlayerIndex +
                                    ", Assigned Player Index: " + assignedPlayerIndex);
 
+                if (currentPlayerIndex != assignedPlayerIndex) {
+                    System.out.println("Invalid action: It's not your turn!");
+                    return; // Do nothing if it's not the client's turn
+                }
+
                 if (!isHost) {
                     // Client sends the move to the host
                     mainGame.getNetworkManager().getClient().sendPlayerMove(assignedPlayerIndex, direction);
-                } else if (assignedPlayerIndex == currentPlayerIndex) {
+                } else {
                     // Host processes its own move
                     try {
                         controller.handleMovement(currentPlayerIndex, direction);
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
-                } else {
-                    System.out.println("Invalid move: Not this player's turn.");
                 }
             }
         }
