@@ -42,6 +42,8 @@ public class MainGame {
     private int assignedPlayerIndex;
     private Client client;
     private JLabel starLabel;
+    private JTextArea chatArea;
+    private JPanel chatPanel; 
 
     
         
@@ -52,6 +54,8 @@ public class MainGame {
             this.isHost = isHost;
             currentPlayerLabel = new JLabel("Initializing..."); // Initialize the label early
             System.out.println("MainGame constructor called. isHost: " + isHost);
+            chatPanel = createChatPanel();
+          
         
             if (isHost) {
                 System.out.println("Host detected. Initializing players and token data...");
@@ -212,7 +216,7 @@ public class MainGame {
         mainGame.layeredPane.add(layeredGridWithPlayers, Integer.valueOf(1)); // Add the grid with players
     
         // Add chat panel
-        JPanel chatPanel = mainGame.createChatPanel();
+        chatPanel = mainGame.createChatPanel();
         chatPanel.setBounds(970, 490, 300, 250); // Positioning the chat panel in the bottom-right corner
         mainGame.layeredPane.add(chatPanel, Integer.valueOf(2)); // Chatbox on top at layer 2
     
@@ -258,6 +262,7 @@ public class MainGame {
     
         // Setup key listeners
         mainGame.setupKeyListeners(frame, mainGame.gameController,this);
+        
     }
     
     
@@ -511,18 +516,21 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         chatPanel.setOpaque(false); // Transparent background
     
         // Text area to display chat messages
-        JTextArea chatArea = new JTextArea();
-        chatArea.setEditable(false); // Users shouldn't edit chat history
-        chatArea.setLineWrap(true);  // Wrap text to the next line
-        chatArea.setWrapStyleWord(true);
-        chatArea.setForeground(Color.WHITE); // Set text color to white
-        chatArea.setFont(new Font("Arial", Font.BOLD, 14)); // Set text to bold
-        chatArea.setOpaque(false); // Transparent background for text area
-    
+        if (chatArea==null) {
+            
+            chatArea = new JTextArea();
+            chatArea.setEditable(false); // Users shouldn't edit chat history
+            chatArea.setLineWrap(true);  // Wrap text to the next line
+            chatArea.setWrapStyleWord(true);
+            chatArea.setForeground(Color.WHITE); // Set text color to white
+            chatArea.setFont(new Font("Arial", Font.BOLD, 14)); // Set text to bold
+            chatArea.setOpaque(false); // Transparent background for text area
+        
+            
+        }
         JScrollPane scrollPane = new JScrollPane(chatArea);
         scrollPane.setOpaque(false); // Transparent scroll pane
         scrollPane.getViewport().setOpaque(false); // Transparent viewport
-    
         // Text field for typing messages
         JTextField messageField = new JTextField();
         messageField.setForeground(Color.BLACK); // Set text color to white
@@ -542,13 +550,32 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         sendButton.addActionListener(e -> {
             String message = messageField.getText().trim();
             if (!message.isEmpty()) {
-                chatArea.append("Player: " + message + "\n"); // Append message to chat area
+                String formattedMessage = "Player " + (assignedPlayerIndex + 1) + ": " + message;
+                chatArea.append(formattedMessage + "\n"); // Display locally
                 messageField.setText(""); // Clear the input field
+        
+                // Send message over the network
+                if (networkManager != null) {
+                    String networkMessage = "[ID]#CHAT#" + (assignedPlayerIndex + 1) + ":" + message;
+                    if (isHost) {
+                        networkManager.broadcastChatMessage(networkMessage);
+                    } else {
+                        try {
+                            networkManager.getClient().sendMessage(networkMessage);
+                        } catch (IOException e1) {
+                            // TODO Auto-generated catch block
+                            e1.printStackTrace();
+                        }
+                    }
+                }
+        
+                // Log message in the console
+                System.out.println("[ID]#CHAT#" + (assignedPlayerIndex + 1) + ":" + message);
             }
-            //regaining focus after hiting enter key
             SwingUtilities.getWindowAncestor(chatPanel).requestFocusInWindow();
         });
-    
+        
+        
         // Allow sending messages with the Enter key
         messageField.addActionListener(e -> {
             String message = messageField.getText().trim();
@@ -572,6 +599,10 @@ private JLayeredPane createInteractiveInsertLayeredPane(String imagePath, int ro
         chatPanel.add(inputPanel, BorderLayout.SOUTH);
     
         return chatPanel; // Return the transparent chat panel
+    }
+
+    public JTextArea getChatArea() {
+        return chatArea;
     }
     
 
@@ -1231,7 +1262,8 @@ public void joinGame() {
                 MainGame joinedGame = new MainGame(false, gameState);
 
                 // Pass the initialized GameController to the client
-                client.listenForUpdates(joinedGame.gameController);
+                JTextArea chatArea = joinedGame.getChatArea(); 
+                client.listenForUpdates(joinedGame.gameController, chatArea);
 
                 // Set up NetworkManager
                 networkManager = new NetworkManager(null, client);

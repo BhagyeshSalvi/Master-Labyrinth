@@ -1,6 +1,9 @@
 import java.io.*;
 import java.net.Socket;
 
+import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
+
 public class Client {
     private Socket clientSocket;
     private ObjectOutputStream out;
@@ -30,17 +33,46 @@ public class Client {
         return null;
     }
     
-    
-    public void listenForUpdates(GameController controller) {
+    public void listenForUpdates(GameController gameController, JTextArea chatArea) {
         new Thread(() -> {
-            while (true) {
-                GameState updatedState = receiveGameState();
-                if (updatedState != null) {
-                    controller.updateGameState(updatedState);
+            try {
+                while (true) {
+                    Object message = in.readObject();
+    
+                    // Handle GameState updates
+                    if (message instanceof GameState) {
+                        GameState state = (GameState) message;
+                        gameController.updateGameState(state);
+                        System.out.println("Client: Received GameState update.");
+                    }
+    
+                    // Handle chat messages
+                    if (message instanceof String) {
+                        String msg = (String) message;
+
+                         // Ignore self-broadcasted messages
+                    if (msg.contains("[FROM:CLIENT]")) {
+                        System.out.println("Client: Ignoring own broadcasted message.");
+                        continue;
+                    }
+
+                        if (msg.startsWith("[ID]#CHAT#")) {
+                            String chatMessage = msg.substring(10); // Extract message content
+                            SwingUtilities.invokeLater(() -> chatArea.append("Player "+chatMessage + "\n")); // Update UI
+                            System.out.println("Client: Received chat message: " + chatMessage);
+                            chatArea.revalidate();
+                            chatArea.repaint();
+                        } else {
+                            System.out.println("Client: Received unknown string message: " + msg);
+                        }
+                    }
                 }
+            } catch (IOException | ClassNotFoundException e) {
+                System.err.println("Client: Error listening for updates: " + e.getMessage());
             }
         }).start();
     }
+    
     
     
     public void sendPlayerMove(int playerIndex, String direction) {
@@ -61,13 +93,15 @@ public class Client {
 
     public void sendMessage(String message) throws IOException {
         if (out != null) {
-            out.writeObject(message);
+            String modifiedMessage = message + " [FROM:CLIENT]";
+            out.writeObject(modifiedMessage);
             out.flush();
-            System.out.println("Client: Message sent - " + message);
+            System.out.println("Client: Message sent - " + modifiedMessage);
         } else {
             System.err.println("Client: Output stream is not initialized.");
         }
     }
+    
     
     public void close() {
         try {

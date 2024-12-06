@@ -46,6 +46,22 @@ public class NetworkManager {
         }
     }
 
+    public void broadcastChatMessage(String message) {
+        if (host != null) {
+            for (ObjectOutputStream out : host.getOutputStreams()) {
+                try {
+                    out.writeObject(message);
+                    out.flush();
+                } catch (IOException e) {
+                    System.err.println("Error broadcasting chat message: " + e.getMessage());
+                }
+            }
+            System.out.println("Host: Broadcasted chat message: " + message);
+        } else {
+            System.err.println("NetworkManager: Cannot broadcast chat without a host.");
+        }
+    }
+    
     // Close all network connections
     public void closeConnections() {
         if (host != null) {

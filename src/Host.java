@@ -5,6 +5,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.SwingUtilities;
+
 public class Host {
     private Host host;
     private MainGame view;
@@ -22,6 +24,10 @@ public class Host {
         this.gameBoard=gameBoard;
         this.view=view;
 
+    }
+
+    public List<Socket> getConnectedClients() {
+        return connectedClients;
     }
 
     public void startServer(GameState initialState) {
@@ -113,68 +119,94 @@ public class Host {
             this.view = view;
         }
     
-        @Override
-        public void run() {
-            try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
-                while (true) {
-                    Object message = in.readObject();
-                    if (message instanceof String) {
-                        String msg = (String) message;
-                        if (msg.startsWith("MOVE:")) {
-                            String[] parts = msg.split(":");
-                            int playerIndex = Integer.parseInt(parts[1]);
-                            String direction = parts[2];
-        
-                            System.out.println("Host: Received move from Player " + (playerIndex + 1) +
-                                               " in direction: " + direction);
-        
-                            // Validate turn
-                            if (playerIndex != gameController.getCurrentPlayerIndex()) {
-                                System.out.println("Invalid move: Player " + (playerIndex + 1) + " attempted to move out of turn!");
-                                continue; // Ignore the move
-                            }
-        
-                            // Process the move and check for token collection
-                            Point oldPosition = gameBoard.getPlayers()[playerIndex].getPosition();
-                            Point newPosition = new Point(oldPosition);
-                            switch (direction.toLowerCase()) {
-                                case "up" -> newPosition.translate(-1, 0);
-                                case "down" -> newPosition.translate(1, 0);
-                                case "left" -> newPosition.translate(0, -1);
-                                case "right" -> newPosition.translate(0, 1);
-                            }
-        
-                            if (gameBoard.isValidPosition(newPosition) &&
-                                gameBoard.canMove(gameBoard.getPlayers()[playerIndex], direction) &&
-                                !gameBoard.isTileOccupied(newPosition)) {
-        
-                                gameBoard.getPlayers()[playerIndex].setPosition(newPosition);
-                                view.updatePlayerPosition(playerIndex, newPosition);
-        
-                                // Check for token collection
-                                view.collectTokenIfPresent(playerIndex, newPosition);
-        
-                                // Broadcast updated game state
-                                GameState updatedState = new GameState(
-                                    gameBoard.getTiles(),
-                                    gameBoard.getPlayers(),
-                                    gameController.getCurrentPlayerIndex(),
-                                    view.getTokenData(),
-                                    view.getAssignedPlayerIndex()
-                                );
-                                view.getNetworkManager().broadcastGameState(updatedState);
-                                System.out.println("Host: Broadcasting updated game state after move by Player " + (playerIndex + 1));
-                            } else {
-                                System.out.println("Host: Invalid move received from Player " + (playerIndex + 1));
-                            }
-                        }
+       @Override
+public void run() {
+    try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream())) {
+        while (true) {
+            Object message = in.readObject();
+
+            
+            
+            // Handle move messages
+            if (message instanceof String) {
+                String msg = (String) message;
+
+                
+                if (msg.startsWith("MOVE:")) {
+                    String[] parts = msg.split(":");
+                    int playerIndex = Integer.parseInt(parts[1]);
+                    String direction = parts[2];
+
+                    System.out.println("Host: Received move from Player " + (playerIndex + 1) +
+                                       " in direction: " + direction);
+
+                    // Validate turn
+                    if (playerIndex != gameController.getCurrentPlayerIndex()) {
+                        System.out.println("Invalid move: Player " + (playerIndex + 1) + " attempted to move out of turn!");
+                        continue; // Ignore the move
+                    }
+
+                    // Process the move and check for token collection
+                    Point oldPosition = gameBoard.getPlayers()[playerIndex].getPosition();
+                    Point newPosition = new Point(oldPosition);
+                    switch (direction.toLowerCase()) {
+                        case "up" -> newPosition.translate(-1, 0);
+                        case "down" -> newPosition.translate(1, 0);
+                        case "left" -> newPosition.translate(0, -1);
+                        case "right" -> newPosition.translate(0, 1);
+                    }
+
+                    if (gameBoard.isValidPosition(newPosition) &&
+                        gameBoard.canMove(gameBoard.getPlayers()[playerIndex], direction) &&
+                        !gameBoard.isTileOccupied(newPosition)) {
+
+                        gameBoard.getPlayers()[playerIndex].setPosition(newPosition);
+                        view.updatePlayerPosition(playerIndex, newPosition);
+
+                        // Check for token collection
+                        view.collectTokenIfPresent(playerIndex, newPosition);
+
+                        // Broadcast updated game state
+                        GameState updatedState = new GameState(
+                            gameBoard.getTiles(),
+                            gameBoard.getPlayers(),
+                            gameController.getCurrentPlayerIndex(),
+                            view.getTokenData(),
+                            view.getAssignedPlayerIndex()
+                        );
+                        view.getNetworkManager().broadcastGameState(updatedState);
+                        System.out.println("Host: Broadcasting updated game state after move by Player " + (playerIndex + 1));
+                    } else {
+                        System.out.println("Host: Invalid move received from Player " + (playerIndex + 1));
                     }
                 }
-            } catch (IOException | ClassNotFoundException e) {
-                System.err.println("Host: Client disconnected - " + clientSocket.getInetAddress());
+                // Handle chat messages
+                else if (msg.startsWith("[ID]#CHAT#")) {
+                    System.out.println("Host: Received chat message: " + msg);
+
+                    // Broadcast the chat message to all clients
+                    if (view.getNetworkManager() != null) {
+                        view.getNetworkManager().broadcastChatMessage(msg);
+                    }
+
+                    // Update the host UI
+                    String chatMessage =msg.substring(10).replace("[FROM:CLIENT]", "").trim();
+                    SwingUtilities.invokeLater(() -> {
+                        if (view.getChatArea() != null) {
+                            view.getChatArea().append("Player " + chatMessage + "\n");
+                            view.getChatArea().setCaretPosition(view.getChatArea().getDocument().getLength());
+                        }
+                    });
+                } else {
+                    System.out.println("Host: Received unknown message type: " + msg);
+                }
             }
         }
-        
+    } catch (IOException | ClassNotFoundException e) {
+        System.err.println("Host: Client disconnected - " + clientSocket.getInetAddress());
+    }
+}
+
 
     }
     
