@@ -1,9 +1,15 @@
-Changes made
--added a Gameutils class to generate imagepaths
+How to Play :
+
+1.Run the program enter as host and then enter port number 
+2.Run again and then enter join game enter the IP (127.0.0.1 if same computer) and the port number.
+3. Use the keyboards move up,down,left,right.
+4.Player can only move if it his turn and if the tiles have paths to move.
+5.Collect Tokens and your points increase.
+6.After collecting points, end your turn and then next player can play
 
 
-whats working- 
-Chatbox
-Inserting tile in the grid and getting the other tile back in the insert panel
-Player Moving and error dialog boc showing when it comes on the invalid tile
-Player can collect tokens and the tokens are dynamically displayed in the gamearea
+Changes made:
+Added Host and Client class to simplify the logic.
+Removed the GameLogic.java class becasue no need for extra class.
+Network Messages can be sent from host to client and vica versa, and those changes will reflect on UI.
+Like Player movement and Chat Messages.
