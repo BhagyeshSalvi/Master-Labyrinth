@@ -1,18 +1,47 @@
-## Getting Started
+# 🧩 Master Labyrinth – Java Multiplayer Board Game
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+> A networked Java Swing game with live tile shifting, magical tokens, and strategic movement.
 
-## Folder Structure
+![Java](https://img.shields.io/badge/Java-17+-orange)
+![Platform](https://img.shields.io/badge/Platform-Desktop-blue)
+![License](https://img.shields.io/badge/License-Educational-informational)
 
-The workspace contains two folders by default, where:
+---
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
+## 🎮 Overview
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+**Master Labyrinth** is a turn-based puzzle board game built in Java, inspired by the classic Labyrinth. Players shift tiles on a grid to create paths, collect magical items, and outwit their opponents.
 
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+Features include:
+- 🔁 Dynamic tile insertion
+- 📡 Multiplayer networking (host/join via TCP/IP)
+- 🎨 Custom player avatars with movement logic
+- 💬 Real-time in-game chat
+- ✨ Magical item collection system
+- 🧠 Strategy + UI interaction via Java Swing
 
-## Dependency Management
+---
 
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+## 🛠️ Tech Stack
+
+| Layer          | Technology               |
+|----------------|--------------------------|
+| Language       | Java                     |
+| GUI            | Java Swing               |
+| Networking     | Java Sockets (TCP/IP)    |
+| Data Sharing   | Serializable `GameState` |
+| Assets         | Custom PNG icons/images  |
+
+---
+
+🧙‍♂️ Author
+Name: Bhagyesh Salvi
+
+Student #: 041103856
+
+Course: Java Application Programming – UI
+
+College: Algonquin College
+
+📃 License
+This project was created as part of an academic assignment and is intended for learning/demo purposes only.

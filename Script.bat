@@ -32,7 +32,7 @@ SET JARNAME=JAPLabsSwing.jar
 SET JAROUT=labs-jar.out
 SET JARERR=labs-jar.err
 SET DOCDIR=doc
-:: SET DOCPACK=CST8221
+SET DOCPACK=CST8221
 SET DOCERR=labs-javadoc.err
 SET MAINCLASSSRC=src/MainGame.java
 SET MAINCLASSBIN=MainGame
@@ -72,11 +72,11 @@ cd bin
 jar cvfe %JARNAME% %MAINCLASSBIN% . > ../%JAROUT% 2> ../%JARERR%
 jar cvfe %JARNAME% %MAINCLASSBIN% -C bin . -C bin Pictures
 
-
 ECHO "3. Creating Javadoc ..............."
-cd ..
-javadoc -cp ".;%BINDIR%;../%LIBDIR%/*" --module-path "%LIBDIR%" -d %DOCDIR% -sourcepath %SRCDIR% -subpackages %DOCPACK% 2> %DOCERR%
+
+javadoc -d "%DOCDIR%" -sourcepath "%SRCDIR%" -classpath "%BINDIR%" "%SRCDIR%\*.java" 2> "%DOCERR%"
 cd bin
+
 
 ECHO "4. Running Jar ...................."
 start java --module-path "../%LIBDIR%" -jar %JARNAME%
