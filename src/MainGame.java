@@ -415,7 +415,7 @@ public class MainGame {
      * @return the newly created JFrame instance for the game.
      */
     private JFrame createFrame() {
-        JFrame frame = new JFrame("Labyrinth Game with Specific Image Distribution");
+        JFrame frame = new JFrame("Master Labyrinth - Bhagyesh Salvi ");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         return frame;
     }
